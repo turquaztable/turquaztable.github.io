@@ -162,8 +162,8 @@ export default function BeyondTheKitchen({
   }));
 
   // Text colors - use Sanity values, fallback to defaults
-  const hColor = headingColor || "var(--green-bright, #2BA89E)";
-  const sColor = subheadingColor || "var(--text-md, #4A4A4A)";
+  const hColor = headingColor || "#1A1A1A";
+  const sColor = subheadingColor || "#1A1A1A";
 
   return (
     <div ref={ref} className="btk-section">
@@ -195,7 +195,7 @@ export default function BeyondTheKitchen({
           }}
         >
           <p className="btk-label">{label}</p>
-          <h2 className="btk-heading" style={{ color: hColor }}>{heading}</h2>
+          <h2 className="btk-heading" style={{ color: hColor, textShadow: "0 1px 4px rgba(0, 0, 0, 0.15), 0 0 2px rgba(255, 255, 255, 0.6)" }}>{heading}</h2>
           <p className="btk-sub" style={{ color: sColor }}>{subheading}</p>
         </div>
 
@@ -283,7 +283,7 @@ export default function BeyondTheKitchen({
 
       <style>{`
         .btk-section {
-          background: linear-gradient(180deg, var(--cream, #F5F0E8) 0%, #E0EBE9 12%, #1B5E58 45%, #0D2A27 100%);
+          background: linear-gradient(180deg, var(--cream, #F5F0E8) 0%, #E0EBE9 12%, #2A8A82 50%, #1B5E58 100%);
           padding: 100px 0 120px;
           position: relative;
           overflow: hidden;
