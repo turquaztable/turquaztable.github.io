@@ -534,7 +534,7 @@ export default function BeyondTheKitchen({
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(16px);
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.5);
+          border: 1px solid rgba(0, 0, 0, 0.15);
           cursor: pointer;
           transition: all 0.3s ease;
           text-decoration: none;
