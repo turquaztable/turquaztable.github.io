@@ -1,0 +1,58 @@
+---
+/**
+ * SearchBand.astro
+ * Full-width dark green band with search input.
+ * All text is editable through Sanity homepageSettings.
+ * Search form submits to /recipes?q= for the recipe listing page.
+ */
+
+interface Props {
+  heading?: string;
+  placeholder?: string;
+  buttonText?: string;
+}
+
+const {
+  heading = "What would you like to make today?",
+  placeholder = "Search recipes...",
+  buttonText = "Browse All Recipes",
+} = Astro.props;
+---
+
+<section class="bg-green-deep py-9 px-10 max-sm:px-5 max-sm:py-7">
+  <div class="max-w-text mx-auto text-center">
+    <h2 class="font-sans text-[13px] font-bold tracking-ultra uppercase text-white/85 mb-[18px] max-sm:text-[12px] max-sm:tracking-widest">
+      {heading}
+    </h2>
+    <form class="flex gap-3 max-sm:flex-col" action="/recipes" method="get">
+      <div class="flex-1 relative">
+        <svg
+          class="absolute left-4 top-1/2 -translate-y-1/2 text-text-light pointer-events-none"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          name="q"
+          placeholder={placeholder}
+          autocomplete="off"
+          class="w-full px-[18px] py-3.5 pl-11 bg-white border-2 border-transparent focus:border-green-bright text-[14px] font-sans text-text-primary outline-none transition-colors duration-200"
+        />
+      </div>
+      <a
+        href="/recipes"
+        class="font-sans text-[11px] font-bold tracking-wider uppercase text-green-deep bg-white px-6 flex items-center justify-center whitespace-nowrap hover:bg-cream transition-colors duration-200 max-sm:py-3.5"
+      >
+        {buttonText}
+      </a>
+    </form>
+  </div>
+</section>

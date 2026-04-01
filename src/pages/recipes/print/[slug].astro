@@ -1,0 +1,406 @@
+---
+/**
+ * Recipe Print View (/recipes/print/[slug])
+ *
+ * A clean, minimal recipe card optimized for printing.
+ * No navigation, no hero images, no website chrome.
+ * Just the recipe: title, times, ingredients, instructions.
+ *
+ * Auto-triggers the browser print dialog on load.
+ * Includes a "Back to Recipe" link and "Print" button
+ * that are visible on screen but hidden when printing.
+ */
+import { sanityFetch, recipeQueries, sanityClient } from '@lib/sanity';
+import {
+  formatTime,
+  formatTotalTime,
+  capitalize,
+} from '@lib/recipeHelpers';
+
+// --- STATIC PATHS ---
+export async function getStaticPaths() {
+  const recipes = await sanityClient.fetch(`
+    *[_type == "recipe"] { slug }
+  `);
+  return (recipes || [])
+    .filter((r: any) => r.slug?.current)
+    .map((r: any) => ({
+      params: { slug: r.slug.current },
+    }));
+}
+
+// --- FETCH ---
+const { slug } = Astro.params;
+const recipe = await sanityFetch<any>(recipeQueries.bySlug, { slug });
+
+if (!recipe) {
+  return Astro.redirect('/recipes');
+}
+
+const siteSettings = await sanityClient.fetch(
+  `*[_type == "siteSettings"][0] { siteName }`
+);
+const siteName = siteSettings?.siteName || 'TurquazTable';
+
+// Computed values
+const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
+const totalTimeLabel = formatTotalTime(recipe.prepTime, recipe.cookTime);
+const prepTimeLabel = formatTime(recipe.prepTime);
+const cookTimeLabel = formatTime(recipe.cookTime);
+const difficultyLabel = capitalize(recipe.difficulty);
+const siteUrl = Astro.site?.origin || 'https://example.com';
+const recipeUrl = `${siteUrl}/recipes/${recipe.slug.current}`;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>{recipe.title} - Print | {siteName}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Libre+Franklin:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --font-serif: "Cormorant Garamond", "Georgia", serif;
+        --font-sans: "Libre Franklin", "Helvetica Neue", sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: var(--font-sans);
+        color: #1A1A1A;
+        background: #fff;
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 40px 24px 60px;
+        font-size: 14px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── Action bar (screen only) ── */
+      .pr-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 28px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #E5E2DC;
+      }
+      .pr-actions a,
+      .pr-actions button {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-decoration: none;
+        color: #1B5E58;
+        background: none;
+        border: 1px solid #1B5E58;
+        padding: 8px 18px;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+      .pr-actions a:hover,
+      .pr-actions button:hover {
+        background: #1B5E58;
+        color: #fff;
+      }
+
+      /* ── Site name ── */
+      .pr-site-name {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #8A8A8A;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #E5E2DC;
+      }
+
+      /* ── Dietary tags ── */
+      .pr-dietary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .pr-dietary-tag {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #1B5E58;
+        background: #f0f7ef;
+        padding: 3px 10px;
+      }
+
+      /* ── Title + description ── */
+      .pr-title {
+        font-family: var(--font-serif);
+        font-size: 32px;
+        font-weight: 400;
+        line-height: 1.2;
+        color: #1A1A1A;
+        margin-bottom: 10px;
+      }
+      .pr-description {
+        font-size: 14px;
+        color: #4A4A4A;
+        line-height: 1.65;
+        margin-bottom: 20px;
+      }
+
+      /* ── Metadata grid ── */
+      .pr-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        padding: 16px 0;
+        border-top: 1px solid #E5E2DC;
+        border-bottom: 1px solid #E5E2DC;
+        margin-bottom: 32px;
+      }
+      .pr-meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .pr-meta-label {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #8A8A8A;
+      }
+      .pr-meta-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1A1A1A;
+      }
+
+      /* ── Section headings ── */
+      .pr-section-title {
+        font-family: var(--font-serif);
+        font-size: 22px;
+        font-weight: 500;
+        color: #1A1A1A;
+        margin-bottom: 14px;
+      }
+
+      /* ── Ingredients ── */
+      .pr-ingredients {
+        margin-bottom: 36px;
+      }
+      .pr-ingredients ul {
+        list-style: none;
+        padding: 0;
+      }
+      .pr-ingredients li {
+        padding: 7px 0;
+        border-bottom: 1px solid #f0ede8;
+        font-size: 14px;
+        line-height: 1.5;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .pr-ingredients li::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        border: 1.5px solid #bbb;
+        display: inline-block;
+        position: relative;
+        top: 1px;
+      }
+      .pr-ing-amount { font-weight: 600; }
+      .pr-ing-notes { color: #8A8A8A; font-style: italic; }
+
+      /* ── Instructions ── */
+      .pr-instructions {
+        margin-bottom: 36px;
+      }
+      .pr-instructions ol {
+        list-style: none;
+        padding: 0;
+        counter-reset: step;
+      }
+      .pr-instructions li {
+        counter-increment: step;
+        padding: 14px 0;
+        border-bottom: 1px solid #f0ede8;
+        display: flex;
+        gap: 16px;
+        line-height: 1.65;
+        font-size: 14px;
+        color: #4A4A4A;
+      }
+      .pr-step-num {
+        font-family: var(--font-serif);
+        font-size: 18px;
+        font-weight: 500;
+        color: #C47A2E;
+        min-width: 28px;
+        flex-shrink: 0;
+        line-height: 1.5;
+      }
+      .pr-step-tip {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #faf7f2;
+        border-left: 2px solid #C47A2E;
+        font-size: 13px;
+        color: #4A4A4A;
+      }
+      .pr-step-tip strong {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #C47A2E;
+        margin-right: 6px;
+      }
+
+      /* ── Footer ── */
+      .pr-footer {
+        margin-top: 36px;
+        padding-top: 16px;
+        border-top: 1px solid #E5E2DC;
+        font-size: 11px;
+        color: #8A8A8A;
+      }
+      .pr-footer-url {
+        color: #4A4A4A;
+        word-break: break-all;
+      }
+
+      /* ── Print media ── */
+      @media print {
+        .pr-actions { display: none !important; }
+        body { padding: 0; max-width: none; }
+        .pr-site-name { margin-bottom: 16px; padding-bottom: 12px; }
+        .pr-title { font-size: 28px; }
+        @page { margin: 1.5cm 2cm; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Action bar (visible on screen, hidden when printing) -->
+    <div class="pr-actions">
+      <a href={`/recipes/${recipe.slug.current}`}>Back to Recipe</a>
+      <button onclick="window.print()">Print Recipe</button>
+    </div>
+
+    <!-- Site name -->
+    <div class="pr-site-name">{siteName}</div>
+
+    <!-- Dietary tags -->
+    {recipe.dietary?.length > 0 && (
+      <div class="pr-dietary">
+        {recipe.dietary.map((d: string) => (
+          <span class="pr-dietary-tag">{d}</span>
+        ))}
+      </div>
+    )}
+
+    <!-- Title -->
+    <h1 class="pr-title">{recipe.title}</h1>
+
+    <!-- Description -->
+    {recipe.description && (
+      <p class="pr-description">{recipe.description}</p>
+    )}
+
+    <!-- Metadata -->
+    <div class="pr-meta">
+      {prepTimeLabel && (
+        <div class="pr-meta-item">
+          <span class="pr-meta-label">Prep</span>
+          <span class="pr-meta-value">{prepTimeLabel}</span>
+        </div>
+      )}
+      {cookTimeLabel && (
+        <div class="pr-meta-item">
+          <span class="pr-meta-label">Cook</span>
+          <span class="pr-meta-value">{cookTimeLabel}</span>
+        </div>
+      )}
+      {totalTime > 0 && (
+        <div class="pr-meta-item">
+          <span class="pr-meta-label">Total</span>
+          <span class="pr-meta-value">{totalTimeLabel}</span>
+        </div>
+      )}
+      {recipe.servings && (
+        <div class="pr-meta-item">
+          <span class="pr-meta-label">Servings</span>
+          <span class="pr-meta-value">{recipe.servings}</span>
+        </div>
+      )}
+      {difficultyLabel && (
+        <div class="pr-meta-item">
+          <span class="pr-meta-label">Difficulty</span>
+          <span class="pr-meta-value">{difficultyLabel}</span>
+        </div>
+      )}
+    </div>
+
+    <!-- Ingredients -->
+    <div class="pr-ingredients">
+      <h2 class="pr-section-title">Ingredients</h2>
+      <ul>
+        {(recipe.ingredients || []).map((ing: any) => (
+          <li>
+            <span>
+              {ing.amount && <span class="pr-ing-amount">{ing.amount} </span>}
+              {ing.unit && <span>{ing.unit} </span>}
+              <span>{ing.name}</span>
+              {ing.notes && <span class="pr-ing-notes"> ({ing.notes})</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <!-- Instructions -->
+    <div class="pr-instructions">
+      <h2 class="pr-section-title">Instructions</h2>
+      <ol>
+        {(recipe.instructions || []).map((step: any, i: number) => (
+          <li>
+            <span class="pr-step-num">{i + 1}.</span>
+            <div>
+              <div>{step.stepText}</div>
+              {step.tip && (
+                <div class="pr-step-tip">
+                  <strong>Tip:</strong>{step.tip}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <!-- Footer with source URL -->
+    <div class="pr-footer">
+      Recipe from <span class="pr-footer-url">{recipeUrl}</span>
+    </div>
+
+    <!-- Auto-trigger print dialog after fonts load -->
+    <script is:inline>
+      window.addEventListener('load', function() {
+        setTimeout(function() { window.print(); }, 400);
+      });
+    </script>
+  </body>
+</html>

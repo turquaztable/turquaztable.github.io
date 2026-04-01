@@ -1,0 +1,138 @@
+---
+/**
+ * Recipe Listing Page (/recipes)
+ *
+ * Fetches all recipes at build time and passes them to the RecipeFilters
+ * React island, which handles client-side filtering, sorting, search,
+ * and pagination.
+ *
+ * Handles URL query params:
+ *   ?q=search+term
+ *   ?category=desserts
+ *   ?dietary=gluten-free,vegan
+ *   ?occasion=christmas
+ *   ?season=fall
+ *   ?difficulty=easy
+ *   ?sort=quickest
+ *   ?page=2
+ *
+ * The SearchBand on the homepage submits to /recipes?q=...
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SectionLabel from '@components/shared/SectionLabel.astro';
+import RecipeFilters from '@components/recipe/RecipeFilters.tsx';
+import { sanityFetch, recipeQueries, categoryQueries } from '@lib/sanity';
+import { imageUrl, imageSrcSet, placeholderColor } from '@lib/image';
+import {
+  DIETARY_OPTIONS,
+  OCCASION_OPTIONS,
+  SEASON_OPTIONS,
+  DIFFICULTY_OPTIONS,
+  SORT_OPTIONS,
+} from '@lib/recipeHelpers';
+
+// ─── Fetch all recipes + categories at build time ───
+let allRecipes: any[] = [];
+let recipeCategories: any[] = [];
+
+try {
+  const [recipes, categories] = await Promise.all([
+    sanityFetch<any[]>(recipeQueries.all),
+    sanityFetch<any[]>(categoryQueries.recipeCategories),
+  ]);
+  allRecipes = recipes || [];
+  recipeCategories = categories || [];
+} catch (e) {
+  console.warn('Recipes page: Could not fetch Sanity data.');
+}
+
+// Pre-build image URLs for the React island
+// (React can't use @sanity/image-url at runtime)
+const recipesWithImages = allRecipes.map((recipe) => ({
+  _id: recipe._id,
+  title: recipe.title,
+  slug: recipe.slug,
+  description: recipe.description || '',
+  mainImage: recipe.mainImage?.asset
+    ? {
+        src: imageUrl(recipe.mainImage, 600),
+        srcSet: imageSrcSet(recipe.mainImage, [300, 600, 900]),
+        alt: recipe.mainImage?.alt || recipe.title,
+      }
+    : null,
+  prepTime: recipe.prepTime,
+  cookTime: recipe.cookTime,
+  servings: recipe.servings,
+  difficulty: recipe.difficulty,
+  categories: recipe.categories || [],
+  dietary: recipe.dietary || [],
+  occasion: recipe.occasion || [],
+  season: recipe.season || '',
+  tags: recipe.tags || [],
+  publishedAt: recipe.publishedAt || '',
+}));
+
+// Parse URL query params for initial filter state
+const url = Astro.url;
+const initialFilters = {
+  q: url.searchParams.get('q') || '',
+  category: url.searchParams.get('category') || '',
+  dietary: url.searchParams.get('dietary')?.split(',').filter(Boolean) || [],
+  occasion: url.searchParams.get('occasion')?.split(',').filter(Boolean) || [],
+  season: url.searchParams.get('season') || '',
+  difficulty: url.searchParams.get('difficulty') || '',
+  sort: url.searchParams.get('sort') || 'newest',
+  page: parseInt(url.searchParams.get('page') || '1', 10),
+};
+
+// Build page title based on active filters
+let pageTitle = 'Recipes';
+if (initialFilters.q) {
+  pageTitle = `Recipes - Search: ${initialFilters.q}`;
+} else if (initialFilters.category) {
+  const catName = recipeCategories.find(
+    (c: any) => c.slug.current === initialFilters.category
+  )?.title;
+  if (catName) pageTitle = `${catName} Recipes`;
+}
+---
+
+<BaseLayout
+  title={pageTitle}
+  description="Browse all recipes - filter by category, dietary needs, occasion, season, and difficulty."
+>
+  <main>
+    {/* Page header */}
+    <section class="bg-surface border-b border-border">
+      <div class="section-container py-12 max-md:py-8">
+        <SectionLabel text="Recipes" labelStyle align="center" />
+        <h1 class="font-serif text-[42px] font-normal text-text-primary text-center mt-4 mb-0 max-md:text-[32px]">
+          {initialFilters.q
+            ? `Results for "${initialFilters.q}"`
+            : initialFilters.category
+              ? recipeCategories.find((c: any) => c.slug.current === initialFilters.category)?.title || 'All Recipes'
+              : 'All Recipes'
+          }
+        </h1>
+      </div>
+    </section>
+
+    {/* Filters + Grid */}
+    <section class="pt-10 max-md:pt-6">
+      <RecipeFilters
+        client:load
+        recipes={recipesWithImages}
+        categories={recipeCategories.map((c: any) => ({
+          title: c.title,
+          slug: c.slug,
+        }))}
+        dietaryOptions={DIETARY_OPTIONS}
+        occasionOptions={OCCASION_OPTIONS}
+        seasonOptions={SEASON_OPTIONS}
+        difficultyOptions={DIFFICULTY_OPTIONS}
+        sortOptions={SORT_OPTIONS}
+        initialFilters={initialFilters}
+      />
+    </section>
+  </main>
+</BaseLayout>

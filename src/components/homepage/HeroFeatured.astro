@@ -1,0 +1,103 @@
+---
+/**
+ * HeroFeatured.astro
+ * Split layout: image 55% left, text 45% right.
+ * Copper "Featured Recipe" badge on image corner.
+ * Data: dereferenced from homepageSettings.featuredRecipe
+ */
+import { imageUrl, imageSrcSet, placeholderColor } from '@lib/image';
+
+interface FeaturedRecipe {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  description?: string;
+  mainImage?: any;
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  difficulty?: string;
+}
+
+interface Props {
+  recipe: FeaturedRecipe | null;
+}
+
+const { recipe } = Astro.props;
+
+// Don't render if no featured recipe is set
+if (!recipe) return;
+
+const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
+const timeLabel = totalTime >= 60
+  ? `${Math.floor(totalTime / 60)} hr${totalTime >= 120 ? 's' : ''} ${totalTime % 60 ? `${totalTime % 60} min` : ''}`
+  : `${totalTime} min`;
+
+const difficultyLabel = recipe.difficulty
+  ? recipe.difficulty.charAt(0).toUpperCase() + recipe.difficulty.slice(1)
+  : null;
+
+const bgColor = placeholderColor(recipe.mainImage);
+const hasImage = !!recipe.mainImage?.asset;
+---
+
+<section class="max-w-content mx-auto px-10 py-[72px] pb-16 max-md:px-5 max-md:py-12">
+  <div class="grid grid-cols-1 md:grid-cols-[1.15fr_1fr] gap-14 items-center">
+    {/* Image side */}
+    <div class="overflow-hidden relative">
+      {hasImage ? (
+        <img
+          src={imageUrl(recipe.mainImage, 800)}
+          srcset={imageSrcSet(recipe.mainImage, [400, 600, 800, 1200])}
+          sizes="(max-width: 768px) 100vw, 55vw"
+          alt={recipe.title}
+          width="800"
+          height="600"
+          class="w-full aspect-4/3 object-cover block shadow-[0_8px_40px_rgba(0,0,0,0.08)]"
+        />
+      ) : (
+        <div
+          class="aspect-4/3 flex items-center justify-center shadow-[0_8px_40px_rgba(0,0,0,0.08)]"
+          style={`background: linear-gradient(145deg, ${bgColor}, ${bgColor}CC);`}
+        >
+          <span class="text-black/10 text-[11px] font-semibold tracking-wider uppercase font-sans">photo</span>
+        </div>
+      )}
+      <div class="absolute top-0 right-0 bg-copper px-5 py-2.5 font-sans text-[10px] font-bold tracking-[2.5px] uppercase text-white">
+        Featured Recipe
+      </div>
+    </div>
+
+    {/* Text side */}
+    <div>
+      <p class="font-sans text-[11px] font-bold tracking-[3px] uppercase text-copper mb-4">
+        Featured Recipe
+      </p>
+      <h1 class="font-serif text-[42px] font-normal text-text-primary leading-[1.15] tracking-tight mb-5 max-md:text-[32px]">
+        {recipe.title}
+      </h1>
+      {recipe.description && (
+        <p class="font-sans text-[15px] text-text-md leading-[1.75] mb-7">
+          {recipe.description}
+        </p>
+      )}
+      <div class="flex gap-6 text-[13px] text-text-light font-sans font-medium mb-9 pb-7 border-b border-border">
+        {totalTime > 0 && <span>{timeLabel.trim()} total</span>}
+        {totalTime > 0 && difficultyLabel && <span class="text-border">&middot;</span>}
+        {difficultyLabel && <span>{difficultyLabel}</span>}
+        {recipe.servings && (
+          <>
+            <span class="text-border">&middot;</span>
+            <span>Makes {recipe.servings}</span>
+          </>
+        )}
+      </div>
+      <a
+        href={`/recipes/${recipe.slug.current}`}
+        class="inline-flex items-center gap-2.5 font-sans text-[12px] font-bold tracking-wider uppercase text-green-deep border-2 border-green-deep px-8 py-3.5 hover:bg-green-deep hover:text-white transition-all duration-200"
+      >
+        GET THE RECIPE <span class="text-[16px] leading-none">&rarr;</span>
+      </a>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,14 @@
+# robots.txt - Content Creator Site
+# Allow all crawlers access to all content
+
+User-agent: *
+Allow: /
+
+# Sitemap location (update domain when finalized)
+Sitemap: https://example.com/sitemap-index.xml
+
+# Disallow admin/studio paths (Sanity Studio runs separately)
+Disallow: /test
+
+# Print-friendly recipe pages (noindex meta tag is also set)
+Disallow: /recipes/print/

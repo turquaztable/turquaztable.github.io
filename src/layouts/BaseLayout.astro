@@ -1,0 +1,336 @@
+---
+/**
+ * BaseLayout - Full site shell wrapping every page.
+ *
+ * Includes:
+ * - HTML head with meta, OG tags, Twitter Card, Pinterest meta
+ * - Google Fonts preconnect + stylesheet
+ * - Color theme overrides from Sanity siteSettings (inline CSS)
+ * - Dark mode flash prevention script (runs before paint)
+ * - Skip-to-content link (accessibility)
+ * - UtilityBar (scrolls away, visibility controlled by homepageSettings)
+ * - Header/Nav (sticky, links filtered by siteSettings nav toggles)
+ * - Content slot
+ * - Footer
+ * - Analytics script placeholder (PostHog - cookieless mode)
+ * - RSS feed link
+ * - Print stylesheet
+ *
+ * Fetches site-wide data from Sanity at build time:
+ * - siteSettings: site name, logo, tagline, default OG image, color theme, nav toggles, newsletter integration
+ * - homepageSettings: social links, newsletter CTA, utility bar visibility
+ * - recipeCategories: for nav dropdown
+ */
+
+import UtilityBar from "@components/global/UtilityBar.astro";
+import Header from "@components/global/Header.astro";
+import Footer from "@components/global/Footer.astro";
+import {
+  sanityFetch,
+  siteSettingsQuery,
+  homepageSettingsQuery,
+  categoryQueries,
+  urlFor,
+} from "@lib/sanity";
+import { getVisibleNavLinks } from "@lib/navigation";
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  /** Override og:type (default "website", recipe/blog pages use "article") */
+  ogType?: string;
+  /** Set false to hide utility bar (e.g. on error pages) */
+  showUtilityBar?: boolean;
+  /** Pinterest-friendly image URL (2:3 ratio recommended) */
+  pinterestImage?: string;
+  /** Article published date for og:article:published_time */
+  publishedDate?: string;
+}
+
+const {
+  title: pageTitle,
+  description: pageDescription,
+  ogImage: pageOgImage,
+  ogType = "website",
+  showUtilityBar: showUtilityBarProp = true,
+  pinterestImage,
+  publishedDate,
+} = Astro.props;
+
+// --- Fetch site-wide Sanity data ---
+let siteName = "TurquazTable";
+let siteDescription = "";
+let logoUrl: string | undefined;
+let logoAlt: string | undefined;
+let footerTagline = "Baking, art, and everything in between.";
+let defaultOgImage: string | undefined;
+let socialLinks: { platform: string; url: string }[] = [];
+let newsletterCta = "Sign up for free weekly recipes!";
+let recipeCategories: { _id: string; title: string; slug: { current: string } }[] = [];
+
+// Color theme overrides (empty = use CSS defaults)
+let colorOverrides: Record<string, string> = {};
+let darkColorOverrides: Record<string, string> = {};
+
+// Nav toggle map
+let navToggles: Record<string, boolean | undefined | null> = {};
+
+// Section visibility from homepageSettings
+let utilityBarVisible = true;
+let newsletterCtaVisible = true;
+
+// Newsletter integration settings
+let newsletterFormAction = "";
+let newsletterFormMethod = "POST";
+let newsletterHiddenFields: { fieldName: string; fieldValue: string }[] = [];
+
+try {
+  const [siteSettings, homepageSettings, categories] = await Promise.all([
+    sanityFetch<any>(siteSettingsQuery),
+    sanityFetch<any>(homepageSettingsQuery),
+    sanityFetch<any[]>(categoryQueries.recipeCategories),
+  ]);
+
+  if (siteSettings) {
+    siteName = siteSettings.siteName || siteName;
+    siteDescription = siteSettings.siteDescription || "";
+    footerTagline = siteSettings.footerTagline || footerTagline;
+    if (siteSettings.logo) {
+      logoUrl = urlFor(siteSettings.logo).width(200).url();
+      logoAlt = siteSettings.logo.alt || siteName;
+    }
+    if (siteSettings.defaultOgImage) {
+      defaultOgImage = urlFor(siteSettings.defaultOgImage).width(1200).height(630).url();
+    }
+
+    // Color theme
+    const colorMap: Record<string, string> = {
+      colorBackground: "--bg",
+      colorSurface: "--surface",
+      colorGreenBright: "--green-bright",
+      colorGreenDeep: "--green-deep",
+      colorCopper: "--copper",
+      colorText: "--text",
+      colorTextMd: "--text-md",
+      colorTextLight: "--text-light",
+      colorCream: "--cream",
+      colorBorder: "--border",
+    };
+    for (const [field, cssVar] of Object.entries(colorMap)) {
+      const val = siteSettings[field];
+      if (val && typeof val === "string" && val.startsWith("#")) {
+        colorOverrides[cssVar] = val;
+      }
+    }
+    // Derive copper-light from copper if copper is overridden
+    if (colorOverrides["--copper"]) {
+      colorOverrides["--copper-light"] = colorOverrides["--copper"] + "CC";
+    }
+
+    // Dark mode color theme
+    const darkColorMap: Record<string, string> = {
+      darkColorBackground: "--bg",
+      darkColorSurface: "--surface",
+      darkColorGreenBright: "--green-bright",
+      darkColorGreenDeep: "--green-deep",
+      darkColorCopper: "--copper",
+      darkColorText: "--text",
+      darkColorTextMd: "--text-md",
+      darkColorTextLight: "--text-light",
+      darkColorCream: "--cream",
+      darkColorBorder: "--border",
+    };
+    for (const [field, cssVar] of Object.entries(darkColorMap)) {
+      const val = siteSettings[field];
+      if (val && typeof val === "string" && val.startsWith("#")) {
+        darkColorOverrides[cssVar] = val;
+      }
+    }
+    // Derive dark copper-light from dark copper if overridden
+    if (darkColorOverrides["--copper"]) {
+      darkColorOverrides["--copper-light"] = darkColorOverrides["--copper"] + "CC";
+    }
+
+    // Nav toggles
+    navToggles = {
+      showArtNav: siteSettings.showArtNav,
+      showFashionNav: siteSettings.showFashionNav,
+      showBlogNav: siteSettings.showBlogNav,
+      showShopNav: siteSettings.showShopNav,
+    };
+
+    // Newsletter integration
+    newsletterFormAction = siteSettings.newsletterFormAction || "";
+    newsletterFormMethod = siteSettings.newsletterFormMethod || "POST";
+    newsletterHiddenFields = siteSettings.newsletterHiddenFields || [];
+  }
+
+  if (homepageSettings) {
+    socialLinks = homepageSettings.socialLinks || [];
+    newsletterCta = homepageSettings.newsletterCta || newsletterCta;
+    utilityBarVisible = homepageSettings.showUtilityBar !== false;
+    newsletterCtaVisible = homepageSettings.showNewsletterCta !== false;
+  }
+
+  if (categories) {
+    recipeCategories = categories;
+  }
+} catch (e) {
+  console.warn("BaseLayout: Could not fetch Sanity data. Using defaults.");
+}
+
+// Build filtered nav links
+const visibleNavLinks = getVisibleNavLinks(navToggles);
+
+// Build final meta values
+const finalTitle = pageTitle ? `${pageTitle} | ${siteName}` : siteName;
+const finalDescription = pageDescription || siteDescription;
+const finalOgImage = pageOgImage || defaultOgImage;
+const currentPath = Astro.url.pathname;
+const canonicalUrl = new URL(currentPath, Astro.site || "https://example.com").href;
+
+// Should we show the utility bar on this page?
+const shouldShowUtilityBar = showUtilityBarProp && utilityBarVisible;
+
+// Build color override CSS string
+const hasColorOverrides = Object.keys(colorOverrides).length > 0;
+const hasDarkColorOverrides = Object.keys(darkColorOverrides).length > 0;
+let colorCss = "";
+if (hasColorOverrides) {
+  colorCss += `:root { ${Object.entries(colorOverrides).map(([k, v]) => `${k}: ${v}`).join("; ")} }`;
+}
+if (hasDarkColorOverrides) {
+  colorCss += ` html.dark { ${Object.entries(darkColorOverrides).map(([k, v]) => `${k}: ${v}`).join("; ")} }`;
+}
+const hasAnyColorOverrides = hasColorOverrides || hasDarkColorOverrides;
+
+// Serialize newsletter settings for components
+const newsletterSettings = {
+  formAction: newsletterFormAction,
+  formMethod: newsletterFormMethod,
+  hiddenFields: newsletterHiddenFields,
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Dark mode flash prevention: runs before first paint -->
+    <script is:inline>
+      (function() {
+        var theme = localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
+    <!-- SEO -->
+    <title>{finalTitle}</title>
+    {finalDescription && <meta name="description" content={finalDescription} />}
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={finalTitle} />
+    {finalDescription && <meta property="og:description" content={finalDescription} />}
+    <meta property="og:url" content={canonicalUrl} />
+    {finalOgImage && <meta property="og:image" content={finalOgImage} />}
+    <meta property="og:site_name" content={siteName} />
+    {publishedDate && <meta property="article:published_time" content={publishedDate} />}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={finalTitle} />
+    {finalDescription && <meta name="twitter:description" content={finalDescription} />}
+    {finalOgImage && <meta name="twitter:image" content={finalOgImage} />}
+
+    <!-- Pinterest -->
+    {pinterestImage && <link rel="image_src" href={pinterestImage} />}
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- RSS Feed -->
+    <link rel="alternate" type="application/rss+xml" title={`${siteName} - Recipes`} href="/rss.xml" />
+
+    <!-- Google Fonts: Cormorant Garamond + Libre Franklin -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Libre+Franklin:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Color theme overrides from Sanity -->
+    {hasAnyColorOverrides && <style set:html={colorCss} />}
+
+    <!--
+      Analytics: PostHog (cookieless mode - no consent banner needed)
+
+      To enable analytics:
+      1. Create a PostHog account at posthog.com
+      2. Copy your project API key
+      3. Replace YOUR_POSTHOG_KEY below with the real key
+      4. Uncomment the script block
+
+      PostHog is configured in cookieless/memory mode so no cookie
+      consent banner is required. This is GDPR-friendly out of the box.
+    -->
+    <!--
+    <script is:inline>
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on off onSessionId setPersonProperties".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+      posthog.init('YOUR_POSTHOG_KEY', {
+        api_host: 'https://us.i.posthog.com',
+        person_profiles: 'identified_only',
+        persistence: 'memory',
+        autocapture: true,
+        capture_pageview: true,
+        capture_pageleave: true,
+      });
+    </script>
+    -->
+  </head>
+  <body class="min-h-screen bg-bg text-text-primary">
+    <!-- Skip to content link (accessibility) -->
+    <a href="#main-content" class="skip-to-content">
+      Skip to content
+    </a>
+
+    {shouldShowUtilityBar && (
+      <UtilityBar
+        newsletterCta={newsletterCta}
+        socialLinks={socialLinks}
+        showNewsletterCta={newsletterCtaVisible}
+      />
+    )}
+
+    <Header
+      siteName={siteName}
+      logoUrl={logoUrl}
+      logoAlt={logoAlt}
+      currentPath={currentPath}
+      recipeCategories={recipeCategories}
+      navLinks={visibleNavLinks}
+    />
+
+    <main id="main-content">
+      <slot />
+    </main>
+
+    <Footer
+      siteName={siteName}
+      tagline={footerTagline}
+      socialLinks={socialLinks}
+    />
+  </body>
+</html>
+
+<style is:global>
+  @import "../styles/global.css";
+</style>

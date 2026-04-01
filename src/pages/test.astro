@@ -1,0 +1,252 @@
+---
+/**
+ * Test Page — Sanity Connection Verification
+ *
+ * Fetches every content type and both singletons, displays the results
+ * so you can confirm the entire Astro → Sanity pipeline works.
+ *
+ * Delete this page before going to production (Session 7).
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import {
+  sanityFetch,
+  recipeQueries,
+  categoryQueries,
+  artQueries,
+  fashionQueries,
+  blogQueries,
+  shopQueries,
+  homepageSettingsQuery,
+  siteSettingsQuery,
+} from "@lib/sanity";
+
+// Attempt all queries — wrap each in try/catch so one failure doesn't break the page
+let recipes: any[] = [];
+let categories: any[] = [];
+let artPosts: any[] = [];
+let fashionPosts: any[] = [];
+let blogPosts: any[] = [];
+let products: any[] = [];
+let homepageSettings: any = null;
+let siteSettings: any = null;
+let errors: string[] = [];
+
+try {
+  recipes = await sanityFetch<any[]>(recipeQueries.all);
+} catch (e: any) {
+  errors.push(`Recipes: ${e.message}`);
+}
+
+try {
+  categories = await sanityFetch<any[]>(categoryQueries.all);
+} catch (e: any) {
+  errors.push(`Categories: ${e.message}`);
+}
+
+try {
+  artPosts = await sanityFetch<any[]>(artQueries.all);
+} catch (e: any) {
+  errors.push(`Art Posts: ${e.message}`);
+}
+
+try {
+  fashionPosts = await sanityFetch<any[]>(fashionQueries.all);
+} catch (e: any) {
+  errors.push(`Fashion Posts: ${e.message}`);
+}
+
+try {
+  blogPosts = await sanityFetch<any[]>(blogQueries.all);
+} catch (e: any) {
+  errors.push(`Blog Posts: ${e.message}`);
+}
+
+try {
+  products = await sanityFetch<any[]>(shopQueries.all);
+} catch (e: any) {
+  errors.push(`Products: ${e.message}`);
+}
+
+try {
+  homepageSettings = await sanityFetch<any>(homepageSettingsQuery);
+} catch (e: any) {
+  errors.push(`Homepage Settings: ${e.message}`);
+}
+
+try {
+  siteSettings = await sanityFetch<any>(siteSettingsQuery);
+} catch (e: any) {
+  errors.push(`Site Settings: ${e.message}`);
+}
+
+const counts = [
+  { label: "Recipes", count: recipes?.length || 0 },
+  { label: "Categories", count: categories?.length || 0 },
+  { label: "Art Posts", count: artPosts?.length || 0 },
+  { label: "Fashion Posts", count: fashionPosts?.length || 0 },
+  { label: "Blog Posts", count: blogPosts?.length || 0 },
+  { label: "Affiliate Products", count: products?.length || 0 },
+];
+---
+
+<BaseLayout title="Sanity Connection Test">
+  <main style="max-width: 900px; margin: 0 auto; padding: 60px 40px;">
+    <a
+      href="/"
+      style="font-family: var(--font-sans); font-size: 12px; font-weight: 600; color: var(--copper); text-decoration: none; display: inline-block; margin-bottom: 24px;"
+    >
+      ← Back to Home
+    </a>
+
+    <h1
+      style="font-family: var(--font-serif); font-size: 36px; font-weight: 400; color: var(--text); margin: 0 0 8px;"
+    >
+      Sanity Connection Test
+    </h1>
+    <p
+      style="font-family: var(--font-sans); font-size: 14px; color: var(--text-light); margin: 0 0 40px;"
+    >
+      This page queries every content type from Sanity. Green = data found. Gray = empty (add sample content). Red = connection error.
+    </p>
+
+    {/* ─── Errors ─── */}
+    {errors.length > 0 && (
+      <div
+        style="background: #FEF2F2; border: 1px solid #FECACA; padding: 20px 24px; margin-bottom: 32px;"
+      >
+        <p
+          style="font-family: var(--font-sans); font-size: 13px; font-weight: 700; color: #991B1B; margin: 0 0 8px;"
+        >
+          Connection Errors
+        </p>
+        <p
+          style="font-family: var(--font-sans); font-size: 13px; color: #991B1B; margin: 0 0 12px;"
+        >
+          Make sure your <code>.env</code> file has the correct Sanity project ID and dataset.
+        </p>
+        {errors.map((err) => (
+          <p
+            style="font-family: var(--font-sans); font-size: 12px; color: #B91C1C; margin: 4px 0; font-family: monospace;"
+          >
+            {err}
+          </p>
+        ))}
+      </div>
+    )}
+
+    {/* ─── Content Counts ─── */}
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 48px;">
+      {counts.map((item) => (
+        <div
+          style={`padding: 20px; border: 1px solid var(--border); background: ${item.count > 0 ? "#F0FDF4" : "var(--surface)"};`}
+        >
+          <p
+            style={`font-family: var(--font-serif); font-size: 36px; font-weight: 300; margin: 0 0 4px; color: ${item.count > 0 ? "var(--green-deep)" : "var(--text-light)"};`}
+          >
+            {item.count}
+          </p>
+          <p
+            style="font-family: var(--font-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-md); margin: 0;"
+          >
+            {item.label}
+          </p>
+        </div>
+      ))}
+    </div>
+
+    {/* ─── Singleton Status ─── */}
+    <h2
+      style="font-family: var(--font-serif); font-size: 24px; font-weight: 400; color: var(--text); margin: 0 0 16px; padding-top: 16px; border-top: 1px solid var(--border);"
+    >
+      Singleton Documents
+    </h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px;">
+      <div
+        style={`padding: 20px; border: 1px solid var(--border); background: ${homepageSettings ? "#F0FDF4" : "var(--surface)"};`}
+      >
+        <p
+          style="font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-md); margin: 0 0 4px;"
+        >
+          Homepage Settings
+        </p>
+        <p style="font-family: var(--font-sans); font-size: 13px; color: var(--text-light); margin: 0;">
+          {homepageSettings
+            ? `Connected — Featured recipe: ${homepageSettings.featuredRecipe?.title || "(not set)"}`
+            : "Not configured yet — open Sanity Studio and create the Homepage Settings document"}
+        </p>
+      </div>
+      <div
+        style={`padding: 20px; border: 1px solid var(--border); background: ${siteSettings ? "#F0FDF4" : "var(--surface)"};`}
+      >
+        <p
+          style="font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-md); margin: 0 0 4px;"
+        >
+          Site Settings
+        </p>
+        <p style="font-family: var(--font-sans); font-size: 13px; color: var(--text-light); margin: 0;">
+          {siteSettings
+            ? `Connected — Site name: "${siteSettings.siteName}"`
+            : "Not configured yet — open Sanity Studio and create the Site Settings document"}
+        </p>
+      </div>
+    </div>
+
+    {/* ─── Sample Recipe Data ─── */}
+    {recipes.length > 0 && (
+      <div style="margin-bottom: 48px;">
+        <h2
+          style="font-family: var(--font-serif); font-size: 24px; font-weight: 400; color: var(--text); margin: 0 0 16px; padding-top: 16px; border-top: 1px solid var(--border);"
+        >
+          Sample Recipes
+        </h2>
+        {recipes.slice(0, 5).map((recipe: any) => (
+          <div style="padding: 16px 0; border-bottom: 1px solid var(--border);">
+            <h3
+              style="font-family: var(--font-serif); font-size: 18px; font-weight: 500; color: var(--text); margin: 0 0 4px;"
+            >
+              {recipe.title}
+            </h3>
+            <p
+              style="font-family: var(--font-sans); font-size: 13px; color: var(--text-light); margin: 0;"
+            >
+              {[
+                recipe.difficulty,
+                recipe.prepTime && `${recipe.prepTime}min prep`,
+                recipe.cookTime && `${recipe.cookTime}min cook`,
+                recipe.categories?.map((c: any) => c.title).join(", "),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* ─── Sample Categories ─── */}
+    {categories.length > 0 && (
+      <div style="margin-bottom: 48px;">
+        <h2
+          style="font-family: var(--font-serif); font-size: 24px; font-weight: 400; color: var(--text); margin: 0 0 16px; padding-top: 16px; border-top: 1px solid var(--border);"
+        >
+          Categories
+        </h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          {categories.map((cat: any) => (
+            <span
+              style="font-family: var(--font-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 6px 14px; background: var(--cream); color: var(--text-md);"
+            >
+              {cat.title} ({cat.contentType || "untyped"})
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <p
+      style="font-family: var(--font-sans); font-size: 12px; color: var(--text-light); margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border);"
+    >
+      Delete this test page before going to production. It's located at <code>src/pages/test.astro</code>.
+    </p>
+  </main>
+</BaseLayout>

@@ -1,0 +1,30 @@
+---
+/**
+ * RecipeLayout - Wrapper for recipe detail pages.
+ * Extends BaseLayout with recipe-specific meta.
+ * schema.org/Recipe JSON-LD is injected by the page ([slug].astro) itself.
+ */
+
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  pinterestImage?: string;
+  publishedDate?: string;
+}
+
+const { title, description, ogImage, pinterestImage, publishedDate } = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogImage={ogImage}
+  ogType="article"
+  pinterestImage={pinterestImage}
+  publishedDate={publishedDate}
+>
+  <slot />
+</BaseLayout>

@@ -1,0 +1,97 @@
+---
+/**
+ * VideoEmbed.astro - Detects platform from URL and renders the appropriate embed.
+ * Supports YouTube (privacy-enhanced), TikTok, and Instagram.
+ *
+ * Usage:
+ *   <VideoEmbed url="https://www.youtube.com/watch?v=abc123" title="My Video" />
+ */
+
+interface Props {
+  url: string;
+  title?: string;
+  class?: string;
+}
+
+const { url, title = 'Video', class: className = '' } = Astro.props;
+
+// ─── PLATFORM DETECTION ───
+
+type Platform = 'youtube' | 'tiktok' | 'instagram' | 'unknown';
+
+function detectPlatform(videoUrl: string): Platform {
+  if (/youtu\.?be/i.test(videoUrl)) return 'youtube';
+  if (/tiktok\.com/i.test(videoUrl)) return 'tiktok';
+  if (/instagram\.com/i.test(videoUrl)) return 'instagram';
+  return 'unknown';
+}
+
+function getYouTubeId(videoUrl: string): string | null {
+  // Match youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID, youtube.com/shorts/ID
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = videoUrl.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function getTikTokId(videoUrl: string): string | null {
+  const match = videoUrl.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+  return match ? match[1] : null;
+}
+
+const platform = detectPlatform(url);
+const youtubeId = platform === 'youtube' ? getYouTubeId(url) : null;
+const tiktokId = platform === 'tiktok' ? getTikTokId(url) : null;
+---
+
+<div class:list={["video-embed", className]}>
+  {platform === 'youtube' && youtubeId ? (
+    <div class="relative w-full aspect-16/9">
+      <iframe
+        src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+        title={title}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy"
+        class="absolute inset-0 w-full h-full border-0"
+      />
+    </div>
+  ) : platform === 'tiktok' && tiktokId ? (
+    <div class="relative w-full max-w-[340px] mx-auto">
+      <iframe
+        src={`https://www.tiktok.com/embed/v2/${tiktokId}`}
+        title={title}
+        allowfullscreen
+        loading="lazy"
+        class="w-full border-0"
+        style="height: 600px;"
+      />
+    </div>
+  ) : platform === 'instagram' ? (
+    <div class="relative w-full max-w-[540px] mx-auto">
+      <blockquote
+        class="instagram-media"
+        data-instgrm-permalink={url}
+        data-instgrm-version="14"
+        style="width: 100%;"
+      />
+      <script async src="https://www.instagram.com/embed.js" />
+    </div>
+  ) : (
+    <div class="py-6 px-8 bg-cream border border-border text-center">
+      <p class="font-sans text-sm text-text-md mb-2">Video available at:</p>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-sans text-sm font-semibold text-green-deep hover:text-green-bright transition-colors"
+      >
+        Watch on {platform === 'unknown' ? 'external site' : platform} &rarr;
+      </a>
+    </div>
+  )}
+</div>

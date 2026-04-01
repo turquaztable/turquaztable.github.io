@@ -1,0 +1,198 @@
+---
+/**
+ * Homepage - index.astro
+ * Fetches all homepage-specific data from Sanity and renders
+ * sections in the order configured in homepageSettings.homepageSections.
+ *
+ * Section order and visibility is controlled by a draggable list
+ * in Sanity Studio under Homepage Settings > Homepage Section Order.
+ * Text content for SearchBand, Newsletter, and BeyondTheKitchen
+ * is editable through Sanity and passed as props.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CategoryGrid from "@components/homepage/CategoryGrid.astro";
+import HeroFeatured from "@components/homepage/HeroFeatured.astro";
+import SearchBand from "@components/homepage/SearchBand.astro";
+import LatestToggle from "@components/homepage/LatestToggle.tsx";
+import PopularList from "@components/homepage/PopularList.astro";
+import AboutBlock from "@components/homepage/AboutBlock.astro";
+import BeyondTheKitchen from "@components/homepage/BeyondTheKitchen.tsx";
+import NewsletterSection from "@components/homepage/NewsletterSection.astro";
+
+import {
+  getRecipeCategoriesWithImages,
+  getFeaturedRecipe,
+  getLatestRecipes,
+  getLatestVideos,
+  getPopularRecipes,
+  getAboutBlock,
+  getBeyondTheKitchenData,
+  getSectionVisibility,
+  getSearchBandText,
+  getNewsletterText,
+  getNewsletterSettings,
+} from "@lib/homepageQueries";
+import type { SectionConfig } from "@lib/homepageQueries";
+import { imageUrl, imageSrcSet } from "@lib/image";
+
+// Fetch all homepage data in parallel
+let categories: any[] = [];
+let featuredRecipe: any = null;
+let latestRecipes: any[] = [];
+let latestVideos: any[] = [];
+let popularRecipes: any[] = [];
+let aboutData = { siteName: "TurquazTable", aboutBlock: null as any };
+let beyondData: any = { artPost: null, shopText: null };
+let sectionOrder: SectionConfig[] = [
+  { sectionKey: "categoryGrid", enabled: true },
+  { sectionKey: "featuredRecipe", enabled: true },
+  { sectionKey: "searchBand", enabled: true },
+  { sectionKey: "latestToggle", enabled: true },
+  { sectionKey: "popularRecipes", enabled: true },
+  { sectionKey: "aboutBlock", enabled: false },
+  { sectionKey: "beyondTheKitchen", enabled: true },
+  { sectionKey: "newsletterSection", enabled: true },
+];
+let searchBandText = {
+  heading: "What would you like to make today?",
+  placeholder: "Search recipes...",
+  buttonText: "Browse All Recipes",
+};
+let newsletterText = {
+  heading: "Recipes in Your Inbox",
+  subheading: "New recipes, baking tips, and behind-the-scenes updates. No spam.",
+  buttonText: "Subscribe",
+  placeholder: "your@email.com",
+};
+let newsletterSettings = {
+  formAction: "",
+  formMethod: "POST",
+  hiddenFields: [] as { fieldName: string; fieldValue: string }[],
+};
+
+try {
+  const results = await Promise.all([
+    getRecipeCategoriesWithImages(),
+    getFeaturedRecipe(),
+    getLatestRecipes(),
+    getLatestVideos(),
+    getPopularRecipes(),
+    getAboutBlock(),
+    getBeyondTheKitchenData(),
+    getSectionVisibility(),
+    getSearchBandText(),
+    getNewsletterText(),
+    getNewsletterSettings(),
+  ]);
+
+  categories = results[0] || [];
+  featuredRecipe = results[1];
+  latestRecipes = results[2] || [];
+  latestVideos = results[3] || [];
+  popularRecipes = results[4] || [];
+  aboutData = results[5] || aboutData;
+  beyondData = results[6] || beyondData;
+  const visibilityData = results[7];
+  if (visibilityData?.sections) {
+    sectionOrder = visibilityData.sections;
+  }
+  searchBandText = results[8] || searchBandText;
+  newsletterText = results[9] || newsletterText;
+  newsletterSettings = results[10] || newsletterSettings;
+} catch (e) {
+  console.warn("Homepage: Could not fetch Sanity data. Using defaults.");
+}
+
+// Pre-build Sanity image URLs for LatestToggle React island
+const recipeImageUrls: Record<string, { src: string; srcSet: string }> = {};
+for (const recipe of latestRecipes) {
+  if (recipe.mainImage?.asset) {
+    recipeImageUrls[recipe._id] = {
+      src: imageUrl(recipe.mainImage, 600),
+      srcSet: imageSrcSet(recipe.mainImage, [300, 600, 900]),
+    };
+  }
+}
+
+// Pre-build image URLs for Beyond the Kitchen portal cards
+const btkArtImageUrl = beyondData.artCardImage?.asset
+  ? imageUrl(beyondData.artCardImage, 600)
+  : null;
+const btkShopImageUrl = beyondData.shopCardImage?.asset
+  ? imageUrl(beyondData.shopCardImage, 600)
+  : null;
+const btkDoorImageUrl = beyondData.doorImage?.asset
+  ? imageUrl(beyondData.doorImage, 500)
+  : null;
+
+// Filter to only enabled sections
+const enabledSections = sectionOrder.filter((s) => s.enabled !== false);
+---
+
+<BaseLayout
+  description="Recipes, art, and everything in between."
+>
+  <main>
+    {enabledSections.map((section) => {
+      if (section.sectionKey === "categoryGrid") return (
+        <CategoryGrid categories={categories} />
+      );
+      if (section.sectionKey === "featuredRecipe") return (
+        <HeroFeatured recipe={featuredRecipe} />
+      );
+      if (section.sectionKey === "searchBand") return (
+        <SearchBand
+          heading={searchBandText.heading}
+          placeholder={searchBandText.placeholder}
+          buttonText={searchBandText.buttonText}
+        />
+      );
+      if (section.sectionKey === "latestToggle") return (
+        <LatestToggle
+          client:load
+          recipes={latestRecipes}
+          videos={latestVideos}
+          recipeImageUrls={recipeImageUrls}
+        />
+      );
+      if (section.sectionKey === "popularRecipes") return (
+        <PopularList recipes={popularRecipes} />
+      );
+      if (section.sectionKey === "aboutBlock") return (
+        <AboutBlock
+          siteName={aboutData.siteName}
+          aboutBlock={aboutData.aboutBlock}
+        />
+      );
+      if (section.sectionKey === "beyondTheKitchen") return (
+        <BeyondTheKitchen
+          client:visible
+          artPost={beyondData.artPost}
+          shopText={beyondData.shopText}
+          sectionLabel={beyondData.label}
+          sectionHeading={beyondData.heading}
+          sectionSubheading={beyondData.subheading}
+          artCtaText={beyondData.artCtaText}
+          shopCtaText={beyondData.shopText?.ctaText}
+          artCardImageUrl={btkArtImageUrl}
+          shopCardImageUrl={btkShopImageUrl}
+          doorImageUrl={btkDoorImageUrl}
+          headingColor={beyondData.headingColor}
+          subheadingColor={beyondData.subheadingColor}
+        />
+      );
+      if (section.sectionKey === "newsletterSection") return (
+        <NewsletterSection
+          heading={newsletterText.heading}
+          subheading={newsletterText.subheading}
+          buttonText={newsletterText.buttonText}
+          placeholder={newsletterText.placeholder}
+          formAction={newsletterSettings.formAction}
+          formMethod={newsletterSettings.formMethod}
+          hiddenFields={newsletterSettings.hiddenFields}
+        />
+      );
+      return null;
+    })}
+  </main>
+</BaseLayout>

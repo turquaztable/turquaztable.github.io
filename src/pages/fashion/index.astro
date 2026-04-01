@@ -1,0 +1,89 @@
+---
+/**
+ * Fashion & Makeup Listing Page (/fashion)
+ * Grid display with client-side postType filtering.
+ * Heading, intro text, and callout section driven by fashionPageSettings.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import FashionFilters from '@components/fashion/FashionFilters.tsx';
+import SectionLabel from '@components/shared/SectionLabel.astro';
+import { sanityFetch, fashionQueries } from '@lib/sanity';
+import { getFashionPageSettings } from '@lib/pageQueries';
+import { imageUrl, imageSrcSet, placeholderColor } from '@lib/image';
+
+const [rawPosts, pageSettings] = await Promise.all([
+  sanityFetch<any[]>(fashionQueries.all),
+  getFashionPageSettings(),
+]);
+
+const allPosts = rawPosts || [];
+
+// Pre-build image URLs for the React island (same pattern as recipe listing)
+const posts = allPosts.map((post: any) => {
+  const firstImage = post.gallery?.[0];
+  const hasImage = !!firstImage?.asset;
+  return {
+    _id: post._id,
+    title: post.title,
+    slug: post.slug,
+    postType: post.postType || '',
+    description: post.description || '',
+    imageUrl: hasImage ? imageUrl(firstImage, 600) : '',
+    imageSrcSet: hasImage ? imageSrcSet(firstImage, [300, 600, 900]) : '',
+    bgColor: placeholderColor(firstImage),
+    publishedAt: post.publishedAt || '',
+  };
+});
+
+const calloutImageSrc = pageSettings.calloutImage?.asset
+  ? imageUrl(pageSettings.calloutImage, 600)
+  : '';
+---
+
+<BaseLayout
+  title={pageSettings.pageHeading}
+  description="Fashion looks, makeup tutorials, cosplay, and style guides."
+>
+  <section class="max-w-content mx-auto px-10 py-16 max-md:px-5 max-md:py-10">
+    <SectionLabel text={pageSettings.pageHeading} align="center" labelStyle />
+
+    {/* Intro text */}
+    {pageSettings.showIntro && pageSettings.pageIntro && (
+      <p class="font-sans text-[15px] text-text-md leading-[1.75] text-center max-w-text mx-auto mt-4 mb-0">
+        {pageSettings.pageIntro}
+      </p>
+    )}
+
+    <div class="mt-10">
+      <FashionFilters client:load posts={posts} />
+    </div>
+
+    {/* Callout section */}
+    {pageSettings.showCallout && pageSettings.calloutHeading && (
+      <div class="mt-16 p-8 bg-cream border border-border">
+        <div class={`${calloutImageSrc ? 'grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8 items-center' : ''}`}>
+          {calloutImageSrc && (
+            <img
+              src={calloutImageSrc}
+              alt={pageSettings.calloutHeading}
+              class="w-full max-w-[200px] aspect-square object-cover mx-auto md:mx-0"
+              width="200"
+              height="200"
+              loading="lazy"
+            />
+          )}
+          <div>
+            <h2 class="font-serif text-[24px] font-normal text-text-primary mb-3 m-0">
+              {pageSettings.calloutHeading}
+            </h2>
+            {pageSettings.calloutBody && (
+              <p class="font-sans text-[15px] text-text-md leading-[1.75] m-0">
+                {pageSettings.calloutBody}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </section>
+</BaseLayout>

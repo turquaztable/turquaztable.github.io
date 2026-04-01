@@ -1,0 +1,62 @@
+---
+/**
+ * AboutBlock.astro
+ * Cream background section with square photo left, intro text right.
+ * "Hi, I'm [Name]" copper label + body text + "More About Me →" link.
+ * Data: siteSettings.aboutBlock
+ * Positioned directly above Beyond the Kitchen portal.
+ */
+import { imageUrl } from '@lib/image';
+
+interface AboutData {
+  heading?: string;
+  body?: string;
+  photo?: any;
+  linkText?: string;
+}
+
+interface Props {
+  siteName: string;
+  aboutBlock: AboutData | null;
+}
+
+const { siteName, aboutBlock } = Astro.props;
+
+// Fallback content when Sanity hasn't been populated yet
+const cleanName = siteName.replace(/[\[\]]/g, '');
+const heading = aboutBlock?.heading || `Hi, I'm ${cleanName}`;
+const body = aboutBlock?.body ||
+  "Welcome to my corner of the internet. I'm a baker, painter, and all-around creative who believes artistry should spill into every part of life. Here you'll find my favorite recipes, art projects, and so much more — all made with love and probably too many late nights.";
+const linkText = aboutBlock?.linkText || 'More About Me';
+const hasPhoto = !!aboutBlock?.photo?.asset;
+---
+
+<section class="border-t border-border bg-cream">
+  <div class="max-w-[800px] mx-auto py-14 px-10 flex gap-9 items-center max-sm:flex-col max-sm:px-5 max-sm:py-10 max-sm:text-center max-sm:gap-6">
+    <div class="w-[140px] h-[140px] flex-shrink-0 border border-border overflow-hidden max-sm:w-[120px] max-sm:h-[120px]">
+      {hasPhoto ? (
+        <img
+          src={imageUrl(aboutBlock!.photo, 280)}
+          alt={heading}
+          class="w-full h-full object-cover block"
+          loading="lazy"
+        />
+      ) : (
+        <div class="w-full h-full bg-gradient-to-br from-green-bright/[0.18] to-copper/[0.18] flex items-center justify-center">
+          <span class="text-text-light text-[11px] font-sans tracking-wider uppercase">Photo</span>
+        </div>
+      )}
+    </div>
+    <div>
+      <p class="font-sans text-[11px] font-bold tracking-widest uppercase text-copper mb-2.5">
+        {heading}
+      </p>
+      <p class="font-sans text-[14px] text-text-md leading-[1.8] mb-4">
+        {body}
+      </p>
+      <a href="/about" class="font-sans text-[11px] font-bold tracking-wider uppercase text-green-deep hover:text-copper transition-colors duration-200">
+        {linkText} &rarr;
+      </a>
+    </div>
+  </div>
+</section>

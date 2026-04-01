@@ -1,0 +1,28 @@
+---
+/**
+ * GalleryLayout - Full-width layout for art and gallery pages.
+ * Extends BaseLayout. The main content area has no max-width constraint
+ * to allow full-bleed galleries and image grids.
+ */
+
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  publishedDate?: string;
+}
+
+const { title, description, ogImage, publishedDate } = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogImage={ogImage}
+  ogType="article"
+  publishedDate={publishedDate}
+>
+  <slot />
+</BaseLayout>

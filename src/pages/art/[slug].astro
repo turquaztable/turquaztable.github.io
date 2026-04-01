@@ -1,0 +1,180 @@
+---
+/**
+ * Art Detail Page (/art/[slug])
+ *
+ * Renders a full art post with:
+ * - Image gallery with lightbox (React island)
+ * - Medium and dimensions
+ * - Process video embed
+ * - For-sale indicator with purchase link
+ * - Per-page OG/Twitter meta
+ */
+import GalleryLayout from '@layouts/GalleryLayout.astro';
+import ImageGallery from '@components/shared/ImageGallery.tsx';
+import VideoEmbed from '@components/video/VideoEmbed.astro';
+import { sanityFetch, artQueries, sanityClient } from '@lib/sanity';
+import { imageUrl, imageSrcSet, placeholderColor } from '@lib/image';
+
+// ─── STATIC PATHS ───
+export async function getStaticPaths() {
+  const posts = await sanityClient.fetch(`
+    *[_type == "artPost"] { slug }
+  `);
+  return (posts || [])
+    .filter((p: any) => p.slug?.current)
+    .map((p: any) => ({
+      params: { slug: p.slug.current },
+    }));
+}
+
+// ─── FETCH DATA ───
+const { slug } = Astro.params;
+const post = await sanityFetch<any>(artQueries.bySlug, { slug });
+
+if (!post) {
+  return Astro.redirect('/art');
+}
+
+// Build gallery image data for the React component
+const galleryImages = (post.gallery || []).map((img: any) => ({
+  src: img?.asset ? imageUrl(img, 1200) : '',
+  srcSet: img?.asset ? imageSrcSet(img, [400, 800, 1200, 1600]) : '',
+  alt: img?.alt || post.title,
+  bgColor: placeholderColor(img),
+}));
+
+// OG image from first gallery image
+const firstImage = post.gallery?.[0];
+const ogImageUrl = firstImage?.asset ? imageUrl(firstImage, 1200) : undefined;
+
+// Format price
+const priceLabel = post.price ? `$${post.price}` : '';
+---
+
+<GalleryLayout
+  title={post.title}
+  description={post.description}
+  ogImage={ogImageUrl}
+  publishedDate={post.publishedAt}
+>
+  <article class="art-detail">
+    {/* ─── Header ─── */}
+    <div class="max-w-narrow mx-auto px-10 pt-12 pb-8 max-md:px-5 max-md:pt-8">
+      <header class="pb-8 border-b border-border">
+        {post.medium && (
+          <p class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-copper mb-3 m-0">
+            {post.medium}
+          </p>
+        )}
+        <h1 class="font-serif text-[42px] font-normal text-text-primary leading-[1.15] tracking-tight m-0 max-md:text-[32px]">
+          {post.title}
+        </h1>
+
+        {post.description && (
+          <p class="font-sans text-[15px] text-text-md leading-[1.75] mt-4 mb-0">
+            {post.description}
+          </p>
+        )}
+
+        {/* Metadata row */}
+        <div class="flex flex-wrap gap-x-8 gap-y-3 mt-6">
+          {post.medium && (
+            <div class="art-meta-item">
+              <span class="art-meta-label">Medium</span>
+              <span class="art-meta-value">{post.medium}</span>
+            </div>
+          )}
+          {post.dimensions && (
+            <div class="art-meta-item">
+              <span class="art-meta-label">Dimensions</span>
+              <span class="art-meta-value">{post.dimensions}</span>
+            </div>
+          )}
+          {post.forSale && (
+            <div class="art-meta-item">
+              <span class="art-meta-label">Status</span>
+              <span class="art-meta-value text-green-deep">Available for purchase</span>
+            </div>
+          )}
+          {post.forSale && priceLabel && (
+            <div class="art-meta-item">
+              <span class="art-meta-label">Price</span>
+              <span class="art-meta-value">{priceLabel}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Purchase CTA */}
+        {post.forSale && post.purchaseUrl && (
+          <div class="mt-8">
+            <a
+              href={post.purchaseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2.5 font-sans text-xs font-bold tracking-wider uppercase text-green-deep border-2 border-green-deep px-8 py-3.5 hover:bg-green-deep hover:text-white transition-colors"
+            >
+              Purchase This Piece
+              <span class="text-base leading-none">&rarr;</span>
+            </a>
+          </div>
+        )}
+      </header>
+    </div>
+
+    {/* ─── Gallery ─── */}
+    {galleryImages.length > 0 && (
+      <div class="max-w-content mx-auto px-10 pb-12 max-md:px-5">
+        <ImageGallery
+          client:load
+          images={galleryImages}
+          aspect="1/1"
+          columns={galleryImages.length === 1 ? 1 : galleryImages.length === 2 ? 2 : 3}
+          protected={true}
+        />
+      </div>
+    )}
+
+    {/* ─── Process Video ─── */}
+    {post.processVideo && (
+      <div class="max-w-narrow mx-auto px-10 py-10 border-t border-border max-md:px-5 max-md:py-6">
+        <h2 class="font-serif text-[28px] font-medium text-text-primary mb-6 m-0">Process Video</h2>
+        <VideoEmbed url={post.processVideo} title={`${post.title} - process`} />
+      </div>
+    )}
+
+    {/* ─── Categories ─── */}
+    {post.categories?.length > 0 && (
+      <div class="max-w-narrow mx-auto px-10 py-6 max-md:px-5">
+        <div class="flex flex-wrap gap-2">
+          {post.categories.map((cat: any) => (
+            <span class="font-sans text-xs font-medium text-text-md bg-cream px-3.5 py-1.5">
+              {cat.title}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+  </article>
+</GalleryLayout>
+
+<style>
+  .art-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .art-meta-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+  .art-meta-value {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+</style>

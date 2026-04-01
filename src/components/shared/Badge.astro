@@ -1,0 +1,39 @@
+---
+/**
+ * Badge — White background with uppercase label.
+ * Used on category grid cards, recipe card overlays, and similar contexts.
+ *
+ * Variants:
+ * - "overlay" (default): semi-transparent white with backdrop blur, for on-image use
+ * - "solid": fully opaque white background
+ * - "copper": copper background with white text (for featured/accent badges)
+ */
+
+interface Props {
+  label: string;
+  variant?: "overlay" | "solid" | "copper";
+  class?: string;
+}
+
+const {
+  label,
+  variant = "overlay",
+  class: className = "",
+} = Astro.props;
+
+const variantStyles = {
+  overlay: "bg-white/[0.92] backdrop-blur-sm text-text-primary",
+  solid: "bg-white text-text-primary",
+  copper: "bg-copper text-white",
+};
+---
+
+<span
+  class:list={[
+    "inline-block font-sans text-[10px] font-bold tracking-widest uppercase px-3 py-[5px] leading-none",
+    variantStyles[variant],
+    className,
+  ]}
+>
+  {label}
+</span>

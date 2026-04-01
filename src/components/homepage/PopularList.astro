@@ -1,0 +1,78 @@
+---
+/**
+ * PopularList.astro
+ * Numbered list (01–05) with rank number, square thumbnail, title, description.
+ * 1px dividers between rows, hover bg change.
+ * Data: dereferenced from homepageSettings.popularRecipes
+ */
+import { imageUrl, placeholderColor } from '@lib/image';
+
+interface PopularRecipe {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  description?: string;
+  mainImage?: any;
+}
+
+interface Props {
+  recipes: PopularRecipe[];
+}
+
+const { recipes } = Astro.props;
+
+// Limit to 5 items
+const displayRecipes = recipes.slice(0, 5);
+---
+
+{displayRecipes.length > 0 && (
+  <section class="max-w-[840px] mx-auto px-10 pt-6 pb-20 max-sm:px-5 max-sm:pb-14">
+    <div class="flex items-baseline justify-between mb-8 pb-4 border-b border-border">
+      <h2 class="font-serif text-[32px] font-normal text-text-primary m-0 max-sm:text-[26px]">
+        Popular Right Now
+      </h2>
+    </div>
+    <div class="flex flex-col gap-px bg-border">
+      {displayRecipes.map((recipe, index) => {
+        const rank = String(index + 1).padStart(2, '0');
+        const bgColor = placeholderColor(recipe.mainImage);
+        const hasImage = !!recipe.mainImage?.asset;
+        return (
+          <a
+            href={`/recipes/${recipe.slug.current}`}
+            class="flex gap-6 items-center py-5 px-6 bg-surface hover:bg-cream cursor-pointer transition-colors duration-200 no-underline text-inherit max-sm:gap-4 max-sm:px-4 max-sm:py-4"
+          >
+            <span class="font-serif text-[36px] font-light text-copper opacity-45 min-w-[52px] flex-shrink-0 max-sm:text-[28px] max-sm:min-w-[36px]">
+              {rank}
+            </span>
+            <div
+              class="w-[72px] h-[72px] flex-shrink-0 overflow-hidden max-sm:w-14 max-sm:h-14"
+              style={`background: linear-gradient(135deg, ${bgColor}, ${bgColor}CC);`}
+            >
+              {hasImage && (
+                <img
+                  src={imageUrl(recipe.mainImage, 144)}
+                  alt={recipe.title}
+                  width="72"
+                  height="72"
+                  class="w-full h-full object-cover block"
+                  loading="lazy"
+                />
+              )}
+            </div>
+            <div class="min-w-0">
+              <h4 class="font-serif text-[18px] font-medium text-text-primary mb-1 leading-[1.3] max-sm:text-[16px]">
+                {recipe.title}
+              </h4>
+              {recipe.description && (
+                <p class="font-sans text-[13px] text-text-light m-0 leading-normal line-clamp-2">
+                  {recipe.description}
+                </p>
+              )}
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+)}

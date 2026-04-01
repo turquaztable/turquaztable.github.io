@@ -1,0 +1,103 @@
+---
+/**
+ * ShareButtons - Social sharing links for content pages.
+ *
+ * Renders share buttons for Pinterest, Facebook, and X (Twitter).
+ * Uses intent URLs so no JavaScript SDK is needed.
+ * Pinterest uses the provided image URL for pin-friendly sharing.
+ *
+ * Props:
+ * - url: the full canonical URL of the page
+ * - title: the page/recipe title
+ * - description: short description for sharing
+ * - imageUrl: image URL (used by Pinterest pin)
+ */
+interface Props {
+  url: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+}
+
+const { url, title, description = "", imageUrl } = Astro.props;
+
+const encodedUrl = encodeURIComponent(url);
+const encodedTitle = encodeURIComponent(title);
+const encodedDescription = encodeURIComponent(description);
+const encodedImage = imageUrl ? encodeURIComponent(imageUrl) : "";
+
+const shareLinks = [
+  {
+    label: "Pinterest",
+    href: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&media=${encodedImage}&description=${encodedTitle}`,
+    ariaLabel: `Pin ${title} on Pinterest`,
+    icon: `M9.04 21.54c.96.29 1.93.46 2.96.46a10 10 0 0010-10A10 10 0 002 12c0 4.25 2.67 7.9 6.44 9.34-.09-.78-.18-2.07 0-2.96l1.15-4.94s-.29-.58-.29-1.5c0-1.38.8-2.41 1.8-2.41.85 0 1.26.64 1.26 1.4 0 .86-.55 2.15-.83 3.34-.24 1.01.49 1.83 1.48 1.83 1.78 0 3.16-1.88 3.16-4.59 0-2.4-1.72-4.08-4.18-4.08-2.85 0-4.52 2.13-4.52 4.33 0 .86.33 1.78.74 2.28.08.1.09.2.07.3l-.28 1.13c-.04.17-.15.2-.33.12-1.24-.57-2.01-2.4-2.01-3.85 0-3.16 2.29-6.06 6.61-6.06 3.47 0 6.16 2.47 6.16 5.78 0 3.44-2.17 6.22-5.19 6.22-1.01 0-1.97-.53-2.29-1.15l-.62 2.37c-.22.87-.83 1.97-1.24 2.64z`,
+  },
+  {
+    label: "Facebook",
+    href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    ariaLabel: `Share ${title} on Facebook`,
+    icon: `M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z`,
+  },
+  {
+    label: "X",
+    href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
+    ariaLabel: `Share ${title} on X`,
+    icon: `M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z`,
+  },
+];
+---
+
+<div class="share-buttons" role="group" aria-label="Share this page">
+  <span class="share-label">Share</span>
+  {shareLinks.map((link) => (
+    <a
+      href={link.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={link.ariaLabel}
+      class="share-button"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d={link.icon} />
+      </svg>
+    </a>
+  ))}
+</div>
+
+<style>
+  .share-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .share-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+  .share-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--text-md);
+    border: 1px solid var(--border);
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .share-button:hover {
+    color: var(--green-deep);
+    border-color: var(--green-deep);
+    background: var(--cream);
+  }
+
+  @media print {
+    .share-buttons {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,198 @@
+---
+/**
+ * Fashion Detail Page (/fashion/[slug])
+ *
+ * Renders a full fashion/makeup post with:
+ * - Photo gallery with lightbox
+ * - Behind-the-scenes gallery
+ * - Products used (with affiliate links)
+ * - Video embed
+ * - Portable Text body content
+ * - Per-page OG/Twitter meta
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ImageGallery from '@components/shared/ImageGallery.tsx';
+import PortableText from '@components/shared/PortableText.astro';
+import VideoEmbed from '@components/video/VideoEmbed.astro';
+import Badge from '@components/shared/Badge.astro';
+import { sanityFetch, fashionQueries, sanityClient } from '@lib/sanity';
+import { imageUrl, imageSrcSet, placeholderColor } from '@lib/image';
+
+// ─── STATIC PATHS ───
+export async function getStaticPaths() {
+  const posts = await sanityClient.fetch(`
+    *[_type == "fashionPost"] { slug }
+  `);
+  return (posts || [])
+    .filter((p: any) => p.slug?.current)
+    .map((p: any) => ({
+      params: { slug: p.slug.current },
+    }));
+}
+
+// ─── FETCH DATA ───
+const { slug } = Astro.params;
+const post = await sanityFetch<any>(fashionQueries.bySlug, { slug });
+
+if (!post) {
+  return Astro.redirect('/fashion');
+}
+
+const postTypeLabels: Record<string, string> = {
+  fashion: 'Fashion',
+  makeup: 'Makeup',
+  cosplay: 'Cosplay',
+  hair: 'Hair',
+  'style-guide': 'Style Guide',
+};
+
+const typeLabel = post.postType ? postTypeLabels[post.postType] || post.postType : '';
+
+// Build gallery images for React
+const galleryImages = (post.gallery || []).map((img: any) => ({
+  src: img?.asset ? imageUrl(img, 1200) : '',
+  srcSet: img?.asset ? imageSrcSet(img, [400, 800, 1200]) : '',
+  alt: img?.alt || post.title,
+  bgColor: placeholderColor(img),
+}));
+
+const btsImages = (post.behindTheScenes || []).map((img: any) => ({
+  src: img?.asset ? imageUrl(img, 800) : '',
+  srcSet: img?.asset ? imageSrcSet(img, [400, 800]) : '',
+  alt: img?.alt || `${post.title} - behind the scenes`,
+  bgColor: placeholderColor(img),
+}));
+
+// OG image
+const firstImage = post.gallery?.[0];
+const ogImageUrl = firstImage?.asset ? imageUrl(firstImage, 1200) : undefined;
+---
+
+<BaseLayout
+  title={post.title}
+  description={post.description}
+  ogImage={ogImageUrl}
+  ogType="article"
+  publishedDate={post.publishedAt}
+>
+  <article class="fashion-detail">
+    {/* ─── Header ─── */}
+    <div class="max-w-narrow mx-auto px-10 pt-12 pb-8 max-md:px-5 max-md:pt-8">
+      <header class="pb-8 border-b border-border">
+        {typeLabel && (
+          <p class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-copper mb-3 m-0">
+            {typeLabel}
+          </p>
+        )}
+        <h1 class="font-serif text-[42px] font-normal text-text-primary leading-[1.15] tracking-tight m-0 max-md:text-[32px]">
+          {post.title}
+        </h1>
+
+        {post.description && (
+          <p class="font-sans text-[15px] text-text-md leading-[1.75] mt-4 mb-0">
+            {post.description}
+          </p>
+        )}
+
+        {post.publishedAt && (
+          <p class="font-sans text-xs text-text-light mt-4 mb-0">
+            {new Date(post.publishedAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        )}
+      </header>
+    </div>
+
+    {/* ─── Main Gallery ─── */}
+    {galleryImages.length > 0 && (
+      <div class="max-w-content mx-auto px-10 pb-10 max-md:px-5">
+        <ImageGallery
+          client:load
+          images={galleryImages}
+          aspect="3/4"
+          columns={galleryImages.length === 1 ? 1 : galleryImages.length === 2 ? 2 : 3}
+        />
+      </div>
+    )}
+
+    {/* ─── Body Text ─── */}
+    {post.body?.length > 0 && (
+      <div class="max-w-narrow mx-auto px-10 py-10 border-t border-border max-md:px-5 max-md:py-6">
+        <PortableText content={post.body} />
+      </div>
+    )}
+
+    {/* ─── Products Used ─── */}
+    {post.products?.length > 0 && (
+      <div class="max-w-narrow mx-auto px-10 py-10 border-t border-border max-md:px-5 max-md:py-6">
+        <h2 class="font-serif text-[28px] font-medium text-text-primary mb-6 m-0">Products Used</h2>
+        <p class="font-sans text-xs text-text-light mb-6 italic">
+          This section contains affiliate links. I earn a small commission if you purchase through these links, at no extra cost to you.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {post.products.map((product: any, i: number) => (
+            <div class="flex items-start gap-4 p-4 bg-cream">
+              <div class="flex-1 min-w-0">
+                <p class="font-sans text-sm font-semibold text-text-primary m-0">
+                  {product.name}
+                </p>
+                {product.brand && (
+                  <p class="font-sans text-xs text-text-light mt-1 m-0">
+                    {product.brand}
+                  </p>
+                )}
+              </div>
+              {product.affiliateUrl && (
+                <a
+                  href={product.affiliateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex-shrink-0 font-sans text-[10px] font-bold tracking-wider uppercase text-copper hover:text-copper-light transition-colors whitespace-nowrap"
+                >
+                  Shop &rarr;
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* ─── Behind the Scenes ─── */}
+    {btsImages.length > 0 && (
+      <div class="max-w-content mx-auto px-10 py-10 border-t border-border max-md:px-5 max-md:py-6">
+        <h2 class="font-serif text-[28px] font-medium text-text-primary mb-6 m-0">Behind the Scenes</h2>
+        <ImageGallery
+          client:load
+          images={btsImages}
+          aspect="4/3"
+          columns={btsImages.length === 1 ? 1 : btsImages.length === 2 ? 2 : 3}
+        />
+      </div>
+    )}
+
+    {/* ─── Video ─── */}
+    {post.videoUrl && (
+      <div class="max-w-narrow mx-auto px-10 py-10 border-t border-border max-md:px-5 max-md:py-6">
+        <h2 class="font-serif text-[28px] font-medium text-text-primary mb-6 m-0">Watch</h2>
+        <VideoEmbed url={post.videoUrl} title={post.title} />
+      </div>
+    )}
+
+    {/* ─── Tags ─── */}
+    {post.tags?.length > 0 && (
+      <div class="max-w-narrow mx-auto px-10 py-6 max-md:px-5">
+        <div class="flex flex-wrap gap-2">
+          {post.tags.map((tag: string) => (
+            <span class="font-sans text-xs font-medium text-text-md bg-cream px-3.5 py-1.5">
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+  </article>
+</BaseLayout>

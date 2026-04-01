@@ -1,0 +1,161 @@
+---
+/**
+ * NewsletterSection.astro
+ * Deep green background newsletter signup section.
+ * All text is editable through Sanity homepageSettings.
+ *
+ * Newsletter provider integration:
+ * - formAction, formMethod, and hiddenFields come from siteSettings
+ * - When formAction is set, the form submits to the provider endpoint
+ * - When formAction is empty, the form shows a placeholder success message
+ * - Client-side JS handles form submission with fetch() for a seamless UX
+ *
+ * Supported providers:
+ *   Kit (ConvertKit): set formAction to form URL, method POST
+ *   MailerLite: set formAction to subscriber form URL, add hidden fields
+ */
+
+interface HiddenField {
+  fieldName: string;
+  fieldValue: string;
+}
+
+interface Props {
+  heading?: string;
+  subheading?: string;
+  buttonText?: string;
+  placeholder?: string;
+  formAction?: string;
+  formMethod?: string;
+  hiddenFields?: HiddenField[];
+}
+
+const {
+  heading = "Recipes in Your Inbox",
+  subheading = "New recipes, baking tips, and behind-the-scenes updates. No spam.",
+  buttonText = "Subscribe",
+  placeholder = "your@email.com",
+  formAction = "",
+  formMethod = "POST",
+  hiddenFields = [],
+} = Astro.props;
+
+const hasProvider = !!formAction;
+---
+
+<section id="newsletter" class="bg-green-deep py-16 px-10 text-center max-sm:px-5 max-sm:py-12">
+  <div class="max-w-newsletter mx-auto">
+    <h2 class="font-serif text-[32px] font-normal text-[#F0EBE2] mb-3 max-sm:text-[26px]">
+      {heading}
+    </h2>
+    <p class="font-sans text-[14px] text-[#A8B8A4] mb-7 leading-relaxed">
+      {subheading}
+    </p>
+
+    <form
+      class="flex max-sm:flex-col"
+      action={hasProvider ? formAction : "#newsletter"}
+      method={hasProvider ? formMethod : "post"}
+      data-newsletter-form
+    >
+      {/* Hidden fields from provider */}
+      {hiddenFields.map((field) => (
+        <input type="hidden" name={field.fieldName} value={field.fieldValue} />
+      ))}
+
+      <input
+        type="email"
+        name="email"
+        placeholder={placeholder}
+        required
+        autocomplete="email"
+        class="flex-1 px-[18px] py-3.5 border-none text-[14px] font-sans text-text-primary outline-none"
+        data-newsletter-email
+      />
+      <button
+        type="submit"
+        class="bg-copper text-white border-none px-7 py-3.5 text-[11px] font-bold tracking-wider uppercase font-sans cursor-pointer hover:bg-copper-light transition-colors duration-200"
+        data-newsletter-button
+      >
+        {buttonText}
+      </button>
+    </form>
+
+    {/* Success message (hidden by default) */}
+    <div
+      class="hidden mt-4 font-sans text-[14px] text-[#A8B8A4]"
+      data-newsletter-success
+    >
+      <p class="text-[#F0EBE2] font-medium">Thanks for subscribing!</p>
+      <p class="mt-1">Check your inbox to confirm.</p>
+    </div>
+
+    {/* Error message (hidden by default) */}
+    <div
+      class="hidden mt-4 font-sans text-[14px] text-[#E0974D]"
+      data-newsletter-error
+    >
+      Something went wrong. Please try again.
+    </div>
+  </div>
+</section>
+
+<script>
+  // Client-side newsletter form handler
+  document.addEventListener("DOMContentLoaded", () => {
+    const forms = document.querySelectorAll("[data-newsletter-form]");
+    forms.forEach((form) => {
+      form.addEventListener("submit", async (e) => {
+        const formEl = form as HTMLFormElement;
+        const action = formEl.action;
+        const method = formEl.method;
+        const emailInput = form.querySelector("[data-newsletter-email]") as HTMLInputElement;
+        const button = form.querySelector("[data-newsletter-button]") as HTMLButtonElement;
+        const successEl = form.parentElement?.querySelector("[data-newsletter-success]") as HTMLElement;
+        const errorEl = form.parentElement?.querySelector("[data-newsletter-error]") as HTMLElement;
+
+        // If no real provider is configured, show placeholder success
+        if (!action || action.endsWith("#newsletter") || action === "#newsletter") {
+          e.preventDefault();
+          if (successEl) {
+            formEl.style.display = "none";
+            successEl.classList.remove("hidden");
+          }
+          return;
+        }
+
+        // Real provider - submit via fetch for seamless UX
+        e.preventDefault();
+        if (button) {
+          button.textContent = "Sending...";
+          button.disabled = true;
+        }
+
+        try {
+          const formData = new FormData(formEl);
+          const response = await fetch(action, {
+            method: method.toUpperCase(),
+            body: formData,
+            headers: {
+              "Accept": "application/json",
+            },
+          });
+
+          if (response.ok || response.status === 200 || response.status === 302) {
+            formEl.style.display = "none";
+            if (successEl) successEl.classList.remove("hidden");
+            if (errorEl) errorEl.classList.add("hidden");
+          } else {
+            throw new Error("Subscription failed");
+          }
+        } catch (err) {
+          if (errorEl) errorEl.classList.remove("hidden");
+          if (button) {
+            button.textContent = "Try Again";
+            button.disabled = false;
+          }
+        }
+      });
+    });
+  });
+</script>

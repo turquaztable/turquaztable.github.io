@@ -1,0 +1,93 @@
+---
+/**
+ * UtilityBar - Dark green bar at the top of every page.
+ * Newsletter CTA on the left, social icons on the right.
+ * Scrolls away naturally (not sticky - the nav below is sticky).
+ *
+ * Data-driven from Sanity:
+ * - newsletterCta from homepageSettings
+ * - socialLinks from homepageSettings
+ * - showNewsletterCta controls CTA visibility (social icons stay)
+ */
+
+import { socialIcons, defaultSocialOrder } from "@lib/socialIcons";
+
+interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+interface Props {
+  newsletterCta?: string;
+  socialLinks?: SocialLink[];
+  showNewsletterCta?: boolean;
+}
+
+const {
+  newsletterCta = "Sign up for free weekly recipes!",
+  socialLinks,
+  showNewsletterCta = true,
+} = Astro.props;
+
+// Build the social links array - use Sanity data if available, fall back to defaults
+const links: { platform: string; url: string; label: string; path: string }[] = [];
+
+if (socialLinks && socialLinks.length > 0) {
+  for (const link of socialLinks) {
+    const icon = socialIcons[link.platform];
+    if (icon) {
+      links.push({
+        platform: link.platform,
+        url: link.url,
+        label: icon.label,
+        path: icon.path,
+      });
+    }
+  }
+} else {
+  for (const platform of defaultSocialOrder) {
+    const icon = socialIcons[platform];
+    if (icon) {
+      links.push({
+        platform,
+        url: "#",
+        label: icon.label,
+        path: icon.path,
+      });
+    }
+  }
+}
+---
+
+<div class="bg-green-deep">
+  <div class="section-container flex items-center justify-between h-10">
+    <!-- Newsletter CTA -->
+    {showNewsletterCta && (
+      <a
+        href="#newsletter"
+        class="font-sans text-[11px] font-bold tracking-widest uppercase text-white border-b border-white/40 pb-px transition-colors duration-200 hover:border-white/80"
+      >
+        {newsletterCta}
+      </a>
+    )}
+
+    <!-- Spacer when CTA is hidden -->
+    {!showNewsletterCta && <div />}
+
+    <!-- Social Icons -->
+    <div class="flex items-center gap-5">
+      {links.map((link) => (
+        <a
+          href={link.url}
+          title={link.label}
+          aria-label={link.label}
+          class="text-white/75 hover:text-white transition-colors duration-200 flex items-center justify-center w-5 h-5"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d={link.path} />
+          </svg>
+        </a>
+      ))}
+    </div>
+  </div>
+</div>

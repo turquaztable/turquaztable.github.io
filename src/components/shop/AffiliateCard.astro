@@ -1,0 +1,110 @@
+---
+/**
+ * AffiliateCard.astro - Product card for the Shop / My Favorites page.
+ * Square image, product name, description, price, and affiliate link.
+ *
+ * Usage:
+ *   <AffiliateCard product={product} />
+ */
+import { imageUrl, imageSrcSet, placeholderColor } from '@lib/image';
+
+interface ProductData {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  description?: string;
+  image?: any;
+  affiliateUrl: string;
+  category?: string;
+  price?: string;
+  isFavorite?: boolean;
+}
+
+interface Props {
+  product: ProductData;
+  eager?: boolean;
+}
+
+const { product, eager = false } = Astro.props;
+
+const hasImage = !!product.image?.asset;
+const bgColor = placeholderColor(product.image);
+const imgSrc = hasImage ? imageUrl(product.image, 400) : '';
+const imgSrcSetStr = hasImage ? imageSrcSet(product.image, [200, 400, 600]) : '';
+---
+
+<div class="affiliate-card group">
+  {/* Image */}
+  <a
+    href={product.affiliateUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    class="block overflow-hidden relative"
+  >
+    <div class="transition-transform duration-500 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.03]">
+      {hasImage ? (
+        <img
+          src={imgSrc}
+          srcset={imgSrcSetStr}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          alt={product.image?.alt || product.title}
+          loading={eager ? 'eager' : 'lazy'}
+          width="600"
+          height="600"
+          class="w-full aspect-square object-cover block"
+        />
+      ) : (
+        <div
+          class="aspect-square flex items-center justify-center"
+          style={`background: linear-gradient(145deg, ${bgColor}, ${bgColor}CC);`}
+        >
+          <span class="text-black/10 text-[11px] font-semibold tracking-wider uppercase font-sans">photo</span>
+        </div>
+      )}
+    </div>
+    {/* Favorite badge */}
+    {product.isFavorite && (
+      <span class="absolute top-3 left-3 px-2.5 py-1 bg-copper text-white text-[10px] font-bold tracking-widest uppercase font-sans z-[2]">
+        Top Pick
+      </span>
+    )}
+  </a>
+
+  {/* Text */}
+  <div class="pt-3.5">
+    <h3 class="font-serif text-base font-semibold text-text-primary leading-[1.3] m-0">
+      {product.title}
+    </h3>
+
+    {product.price && (
+      <p class="font-sans text-sm font-semibold text-copper mt-1.5 mb-0">
+        {product.price}
+      </p>
+    )}
+
+    {product.description && (
+      <p class="font-sans text-xs text-text-light leading-[1.6] mt-2 mb-0 line-clamp-3">
+        {product.description}
+      </p>
+    )}
+
+    <a
+      href={product.affiliateUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="inline-block mt-3 font-sans text-[10px] font-bold tracking-wider uppercase text-green-deep hover:text-green-bright transition-colors"
+    >
+      Shop Now &rarr;
+    </a>
+  </div>
+</div>
+
+<style>
+  .affiliate-card {
+    transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.35s ease;
+  }
+  .affiliate-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+  }
+</style>

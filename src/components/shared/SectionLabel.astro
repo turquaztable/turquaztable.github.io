@@ -1,0 +1,66 @@
+---
+/**
+ * SectionLabel — Serif heading with optional horizontal rule dividers.
+ *
+ * Two styles:
+ * - "center" (default): Centered text with horizontal lines on each side
+ *   ——— BROWSE BY CATEGORY ———
+ *
+ * - "left": Left-aligned heading with bottom border
+ *   Popular Right Now
+ *   ─────────────────
+ */
+
+interface Props {
+  text: string;
+  align?: "center" | "left";
+  /** Use sans-serif uppercase label style instead of serif heading */
+  labelStyle?: boolean;
+  /** HTML heading level (default: h2) */
+  as?: "h1" | "h2" | "h3" | "h4";
+  class?: string;
+}
+
+const {
+  text,
+  align = "center",
+  labelStyle = false,
+  as: Tag = "h2",
+  class: className = "",
+} = Astro.props;
+---
+
+{align === "center" ? (
+  <Tag
+    class:list={[
+      "flex items-center gap-5 justify-center m-0",
+      labelStyle
+        ? "font-sans text-[12px] font-bold tracking-[0.25em] uppercase text-text-md"
+        : "font-serif text-[32px] font-normal text-text-primary",
+      className,
+    ]}
+  >
+    <span class="w-[60px] h-px bg-border flex-shrink-0" aria-hidden="true"></span>
+    {text}
+    <span class="w-[60px] h-px bg-border flex-shrink-0" aria-hidden="true"></span>
+  </Tag>
+) : (
+  <div
+    class:list={[
+      "flex items-baseline justify-between pb-4 border-b border-border",
+      className,
+    ]}
+  >
+    <Tag
+      class:list={[
+        "m-0",
+        labelStyle
+          ? "font-sans text-[12px] font-bold tracking-[0.25em] uppercase text-text-md"
+          : "font-serif text-[32px] font-normal text-text-primary",
+      ]}
+    >
+      {text}
+    </Tag>
+    <slot />
+  </div>
+)}

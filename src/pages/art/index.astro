@@ -1,0 +1,81 @@
+---
+/**
+ * Art Listing Page (/art)
+ * Grid display of all art/painting posts, newest first.
+ * Heading, intro text, and callout section driven by artPageSettings.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ArtCard from '@components/art/ArtCard.astro';
+import SectionLabel from '@components/shared/SectionLabel.astro';
+import { sanityFetch, artQueries } from '@lib/sanity';
+import { getArtPageSettings } from '@lib/pageQueries';
+import { imageUrl } from '@lib/image';
+
+const [posts, pageSettings] = await Promise.all([
+  sanityFetch<any[]>(artQueries.all),
+  getArtPageSettings(),
+]);
+
+const artPosts = posts || [];
+const calloutImageSrc = pageSettings.calloutImage?.asset
+  ? imageUrl(pageSettings.calloutImage, 600)
+  : '';
+---
+
+<BaseLayout
+  title={pageSettings.pageHeading}
+  description="Original paintings, watercolors, and creative works."
+>
+  <section class="max-w-content mx-auto px-10 py-16 max-md:px-5 max-md:py-10">
+    <SectionLabel text={pageSettings.pageHeading} align="center" labelStyle />
+
+    {/* Intro text */}
+    {pageSettings.showIntro && pageSettings.pageIntro && (
+      <p class="font-sans text-[15px] text-text-md leading-[1.75] text-center max-w-text mx-auto mt-4 mb-0">
+        {pageSettings.pageIntro}
+      </p>
+    )}
+
+    {artPosts.length > 0 ? (
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-10 max-md:gap-4">
+        {artPosts.map((post: any, i: number) => (
+          <ArtCard post={post} eager={i < 4} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20">
+        <p class="font-sans text-text-light text-sm">
+          No art posts yet - check back soon.
+        </p>
+      </div>
+    )}
+
+    {/* Callout section */}
+    {pageSettings.showCallout && pageSettings.calloutHeading && (
+      <div class="mt-16 p-8 bg-cream border border-border">
+        <div class={`${calloutImageSrc ? 'grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8 items-center' : ''}`}>
+          {calloutImageSrc && (
+            <img
+              src={calloutImageSrc}
+              alt={pageSettings.calloutHeading}
+              class="w-full max-w-[200px] aspect-square object-cover mx-auto md:mx-0"
+              width="200"
+              height="200"
+              loading="lazy"
+            />
+          )}
+          <div>
+            <h2 class="font-serif text-[24px] font-normal text-text-primary mb-3 m-0">
+              {pageSettings.calloutHeading}
+            </h2>
+            {pageSettings.calloutBody && (
+              <p class="font-sans text-[15px] text-text-md leading-[1.75] m-0">
+                {pageSettings.calloutBody}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </section>
+</BaseLayout>

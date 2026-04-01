@@ -1,0 +1,191 @@
+---
+/**
+ * Shop / My Favorites Page (/shop)
+ *
+ * Affiliate product grid grouped by category.
+ * Includes CMS-configurable FTC disclosure, Top Picks, category ordering,
+ * and optional Local Orders section.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import AffiliateCard from '@components/shop/AffiliateCard.astro';
+import SectionLabel from '@components/shared/SectionLabel.astro';
+import { sanityFetch, shopQueries } from '@lib/sanity';
+import { getShopPageSettings } from '@lib/pageQueries';
+import { imageUrl } from '@lib/image';
+
+const [allProducts, pageSettings] = await Promise.all([
+  sanityFetch<any[]>(shopQueries.all),
+  getShopPageSettings(),
+]);
+
+const products = allProducts || [];
+
+// Default category labels
+const defaultLabels: Record<string, string> = {
+  'kitchen-tools': 'Kitchen Tools',
+  ingredients: 'Ingredients',
+  'art-supplies': 'Art Supplies',
+  other: 'Other Favorites',
+};
+
+const defaultOrder = ['kitchen-tools', 'ingredients', 'art-supplies', 'other'];
+
+// Group products by category
+const grouped: Record<string, any[]> = {};
+products.forEach((product) => {
+  const cat = product.category || 'other';
+  if (!grouped[cat]) grouped[cat] = [];
+  grouped[cat].push(product);
+});
+
+// Build category label overrides from Sanity settings
+const labelOverrides: Record<string, string> = {};
+if (pageSettings.categoryOrder.length > 0) {
+  pageSettings.categoryOrder.forEach((entry) => {
+    if (entry.label) {
+      labelOverrides[entry.categoryKey] = entry.label;
+    }
+  });
+}
+
+// Determine category display order: Sanity setting > default
+const categoryOrder = pageSettings.categoryOrder.length > 0
+  ? pageSettings.categoryOrder.map((entry) => entry.categoryKey)
+  : defaultOrder;
+
+// Only show categories that have products
+const sortedCategories = categoryOrder.filter((cat) => grouped[cat]?.length > 0);
+
+// Top picks (favorites across all categories)
+const topPicks = products.filter((p) => p.isFavorite);
+
+// Local order items with pre-built image URLs
+const localItems = pageSettings.localOrdersItems.map((item) => ({
+  ...item,
+  imageUrl: item.image?.asset ? imageUrl(item.image, 400) : '',
+}));
+---
+
+<BaseLayout
+  title="My Favorites - Shop"
+  description="Kitchen tools, ingredients, art supplies, and everything I use and love - curated picks with affiliate links."
+>
+  <section class="max-w-content mx-auto px-10 py-16 max-md:px-5 max-md:py-10">
+    <SectionLabel text="My Favorites" align="center" labelStyle />
+
+    {/* FTC Disclosure */}
+    {pageSettings.showDisclosure && (
+      <div class="max-w-text mx-auto mt-8 mb-12 p-6 bg-cream border border-border text-center">
+        <p class="font-sans text-xs text-text-md leading-[1.7] m-0">
+          {pageSettings.disclosureText}
+        </p>
+      </div>
+    )}
+
+    {products.length > 0 ? (
+      <>
+        {/* Top Picks section */}
+        {pageSettings.showTopPicks && topPicks.length > 0 && (
+          <div class="mb-16">
+            <h2 class="font-serif text-[28px] font-normal text-text-primary mb-8 m-0 pb-4 border-b border-border">
+              {pageSettings.topPicksHeading}
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 max-md:gap-4">
+              {topPicks.map((product: any, i: number) => (
+                <AffiliateCard product={product} eager={i < 4} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Category sections */}
+        {sortedCategories.map((cat) => (
+          <div class="mb-16">
+            <h2 class="font-serif text-[28px] font-normal text-text-primary mb-8 m-0 pb-4 border-b border-border">
+              {labelOverrides[cat] || defaultLabels[cat] || cat}
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 max-md:gap-4">
+              {grouped[cat].map((product: any) => (
+                <AffiliateCard product={product} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </>
+    ) : (
+      <div class="text-center py-20">
+        <p class="font-sans text-text-light text-sm">
+          Products coming soon - check back later.
+        </p>
+      </div>
+    )}
+
+    {/* Local Orders section */}
+    {pageSettings.showLocalOrders && (
+      <div class="mt-8 pt-16 border-t border-border">
+        <h2 class="font-serif text-[28px] font-normal text-text-primary mb-4 m-0">
+          {pageSettings.localOrdersHeading}
+        </h2>
+
+        {pageSettings.localOrdersAvailability && (
+          <p class="font-sans text-xs font-bold tracking-wider uppercase text-copper mb-6 m-0">
+            {pageSettings.localOrdersAvailability}
+          </p>
+        )}
+
+        {pageSettings.localOrdersDescription && (
+          <p class="font-sans text-[15px] text-text-md leading-[1.75] mb-8 m-0 max-w-text">
+            {pageSettings.localOrdersDescription}
+          </p>
+        )}
+
+        {localItems.length > 0 && (
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {localItems.map((item) => (
+              <div class="border border-border bg-surface p-0 overflow-hidden">
+                {item.imageUrl && (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    class="w-full aspect-square object-cover"
+                    width="400"
+                    height="400"
+                    loading="lazy"
+                  />
+                )}
+                <div class="p-5">
+                  <div class="flex items-baseline justify-between gap-4 mb-2">
+                    <h3 class="font-serif text-lg font-medium text-text-primary m-0">
+                      {item.name}
+                    </h3>
+                    {item.price && (
+                      <span class="font-sans text-sm font-semibold text-copper whitespace-nowrap">
+                        {item.price}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p class="font-sans text-sm text-text-md leading-[1.6] m-0">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {pageSettings.localOrdersContact && (
+          <div class="p-6 bg-cream border border-border max-w-text">
+            <h3 class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-text-md mb-3 m-0">
+              How to Order
+            </h3>
+            <p class="font-sans text-sm text-text-md leading-[1.7] m-0">
+              {pageSettings.localOrdersContact}
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+  </section>
+</BaseLayout>

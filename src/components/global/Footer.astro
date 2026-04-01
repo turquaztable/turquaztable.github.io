@@ -1,0 +1,103 @@
+---
+/**
+ * Footer — 3-column dark footer.
+ * Column 1: Logo/site name + tagline
+ * Column 2: Explore links
+ * Column 3: Social/connect links
+ * Bottom: copyright line
+ */
+
+import { socialIcons } from "@lib/socialIcons";
+
+interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+interface Props {
+  siteName?: string;
+  tagline?: string;
+  socialLinks?: SocialLink[];
+}
+
+const {
+  siteName = "TurquazTable",
+  tagline = "Baking, art, and everything in between.",
+  socialLinks,
+} = Astro.props;
+
+const year = new Date().getFullYear();
+
+const exploreLinks = [
+  { label: "Recipes", href: "/recipes" },
+  { label: "Art", href: "/art" },
+  { label: "Shop My Favorites", href: "/shop" },
+  { label: "Blog", href: "/blog" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
+];
+
+// Build social link list for footer
+const socialPlatforms = socialLinks && socialLinks.length > 0
+  ? socialLinks.map((link) => ({
+      label: socialIcons[link.platform]?.label || link.platform,
+      url: link.url,
+    }))
+  : [
+      { label: "YouTube", url: "#" },
+      { label: "Instagram", url: "#" },
+      { label: "TikTok", url: "#" },
+      { label: "Pinterest", url: "#" },
+    ];
+---
+
+<footer class="bg-[#141414] pt-14 pb-9 px-10" role="contentinfo">
+  <div class="max-w-content mx-auto grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1fr] gap-12">
+    <!-- Column 1: Logo + Tagline -->
+    <div>
+      <div class="font-serif text-[22px] font-normal text-[#E8E2DA] mb-3">
+        {siteName}
+      </div>
+      <p class="font-sans text-[13px] text-[#666] leading-relaxed">
+        {tagline}
+      </p>
+    </div>
+
+    <!-- Column 2: Explore Links -->
+    <div>
+      <h4 class="font-sans text-[10px] font-bold tracking-widest uppercase text-[#888] mb-[18px]">
+        Explore
+      </h4>
+      {exploreLinks.map((link) => (
+        <a
+          href={link.href}
+          class="block font-sans text-[13px] text-[#555] hover:text-[#999] transition-colors duration-200 mb-2.5"
+        >
+          {link.label}
+        </a>
+      ))}
+    </div>
+
+    <!-- Column 3: Connect / Social -->
+    <div>
+      <h4 class="font-sans text-[10px] font-bold tracking-widest uppercase text-[#888] mb-[18px]">
+        Connect
+      </h4>
+      {socialPlatforms.map((link) => (
+        <a
+          href={link.url}
+          class="block font-sans text-[13px] text-[#555] hover:text-[#999] transition-colors duration-200 mb-2.5"
+        >
+          {link.label}
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <!-- Copyright -->
+  <div class="max-w-content mx-auto mt-9 pt-6 border-t border-[#2A2A2A] text-center">
+    <p class="font-sans text-[11px] text-[#444]">
+      &copy; {year} {siteName}. All rights reserved.
+    </p>
+  </div>
+</footer>

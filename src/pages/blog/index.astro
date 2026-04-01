@@ -1,0 +1,49 @@
+---
+/**
+ * Blog Listing Page (/blog)
+ * Featured first post (horizontal layout), then grid of cards.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import BlogCard from '@components/blog/BlogCard.astro';
+import SectionLabel from '@components/shared/SectionLabel.astro';
+import { sanityFetch, blogQueries } from '@lib/sanity';
+
+const posts = await sanityFetch<any[]>(blogQueries.all) || [];
+const featuredPost = posts[0] || null;
+const remainingPosts = posts.slice(1);
+---
+
+<BaseLayout
+  title="Blog"
+  description="Life updates, creative musings, and everything in between."
+>
+  <section class="max-w-content mx-auto px-10 py-16 max-md:px-5 max-md:py-10">
+    <SectionLabel text="Blog" align="center" labelStyle />
+
+    {posts.length > 0 ? (
+      <div class="mt-10">
+        {/* Featured first post */}
+        {featuredPost && (
+          <div class="mb-12 pb-12 border-b border-border">
+            <BlogCard post={featuredPost} featured eager />
+          </div>
+        )}
+
+        {/* Remaining posts grid */}
+        {remainingPosts.length > 0 && (
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {remainingPosts.map((post: any, i: number) => (
+              <BlogCard post={post} eager={i < 3} />
+            ))}
+          </div>
+        )}
+      </div>
+    ) : (
+      <div class="text-center py-20">
+        <p class="font-sans text-text-light text-sm">
+          No blog posts yet - check back soon.
+        </p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

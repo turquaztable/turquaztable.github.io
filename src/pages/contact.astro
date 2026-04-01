@@ -1,0 +1,120 @@
+---
+/**
+ * Contact Page (/contact)
+ *
+ * Contact information and social links.
+ * Uses contactPageSettings for headings, descriptions, and section visibility.
+ * Uses homepageSettings for social links.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { sanityFetch, siteSettingsQuery, homepageSettingsQuery } from '@lib/sanity';
+import { getContactPageSettings } from '@lib/pageQueries';
+import { socialIcons } from '@lib/socialIcons';
+
+const [siteSettings, homepageSettings, pageSettings] = await Promise.all([
+  sanityFetch<any>(siteSettingsQuery),
+  sanityFetch<any>(homepageSettingsQuery),
+  getContactPageSettings(),
+]);
+
+const siteName = siteSettings?.siteName || 'TurquazTable';
+const socialLinks = homepageSettings?.socialLinks || [];
+
+// Build the list of visible built-in sections
+const builtInSections = [
+  {
+    show: pageSettings.showGeneral,
+    heading: pageSettings.generalHeading,
+    description: pageSettings.generalDescription,
+  },
+  {
+    show: pageSettings.showPress,
+    heading: pageSettings.pressHeading,
+    description: pageSettings.pressDescription,
+  },
+  {
+    show: pageSettings.showArtCommissions,
+    heading: pageSettings.artCommissionsHeading,
+    description: pageSettings.artCommissionsDescription,
+  },
+].filter((s) => s.show);
+---
+
+<BaseLayout
+  title="Contact"
+  description={`Get in touch with ${siteName}. Collaboration, questions, and press inquiries.`}
+>
+  <section class="max-w-text mx-auto px-10 py-16 max-md:px-5 max-md:py-10">
+    {/* Header */}
+    <header class="text-center mb-12">
+      <p class="font-sans text-[11px] font-bold tracking-[0.25em] uppercase text-copper mb-3 m-0">
+        Contact
+      </p>
+      <h1 class="font-serif text-[42px] font-normal text-text-primary leading-[1.15] tracking-tight m-0 max-md:text-[32px]">
+        {pageSettings.pageHeading}
+      </h1>
+      <p class="font-sans text-[15px] text-text-md leading-[1.75] mt-4 mb-0 max-w-md mx-auto">
+        {pageSettings.pageIntro}
+      </p>
+    </header>
+
+    {/* Contact options */}
+    <div class="space-y-10">
+      {/* Built-in sections */}
+      {builtInSections.map((section) => (
+        <div class="p-8 bg-cream border border-border text-center">
+          <h2 class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-text-md mb-3 m-0">
+            {section.heading}
+          </h2>
+          <p class="font-sans text-sm text-text-md leading-[1.7] mb-4 m-0">
+            {section.description}
+          </p>
+        </div>
+      ))}
+
+      {/* Custom additional sections */}
+      {pageSettings.customSections.map((section) => (
+        <div class="p-8 bg-cream border border-border text-center">
+          <h2 class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-text-md mb-3 m-0">
+            {section.heading}
+          </h2>
+          {section.description && (
+            <p class="font-sans text-sm text-text-md leading-[1.7] mb-4 m-0">
+              {section.description}
+            </p>
+          )}
+        </div>
+      ))}
+
+      {/* Social links */}
+      {socialLinks.length > 0 && (
+        <div class="text-center pt-8 border-t border-border">
+          <h2 class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-text-md mb-6 m-0">
+            Find Me Online
+          </h2>
+          <div class="flex flex-wrap gap-6 justify-center">
+            {socialLinks.map((link: { platform: string; url: string }) => {
+              const icon = socialIcons[link.platform];
+              const platformName = icon?.label || link.platform.charAt(0).toUpperCase() + link.platform.slice(1);
+              return (
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-2.5 font-sans text-sm text-text-md hover:text-green-deep transition-colors"
+                >
+                  {icon && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d={icon.path} />
+                    </svg>
+                  )}
+                  {platformName}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+</BaseLayout>

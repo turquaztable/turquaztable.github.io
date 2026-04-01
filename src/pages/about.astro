@@ -1,0 +1,134 @@
+---
+/**
+ * About Page (/about)
+ *
+ * Personal introduction page. Content comes from:
+ * - siteSettings: aboutBlock, aboutPageBody, aboutPagePhoto (bio content)
+ * - aboutPageSettings: Let's Connect section text, button visibility/text/links
+ *
+ * Hardcoded fallback structure when Sanity data is not populated.
+ */
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { sanityFetch, siteSettingsQuery } from "@lib/sanity";
+import { getAboutPageSettings } from "@lib/pageQueries";
+import { imageUrl, placeholderColor } from "@lib/image";
+
+const [siteSettings, pageSettings] = await Promise.all([
+  sanityFetch<any>(siteSettingsQuery),
+  getAboutPageSettings(),
+]);
+
+const about = siteSettings?.aboutBlock;
+const siteName = siteSettings?.siteName || "TurquazTable";
+
+// About page uses its own body text if available, otherwise falls back to aboutBlock body
+const pageBody = siteSettings?.aboutPageBody || null;
+
+// About page uses its own photo if available, otherwise falls back to aboutBlock photo
+const pagePhoto = siteSettings?.aboutPagePhoto || about?.photo || null;
+const hasPhoto = !!pagePhoto?.asset;
+const photoSrc = hasPhoto ? imageUrl(pagePhoto, 600) : "";
+
+// Heading: aboutPageSettings override > aboutBlock heading > siteName
+const introHeading = pageSettings.introHeading || about?.heading || siteName;
+---
+
+<BaseLayout
+  title="About"
+  description={about?.body ? `Learn more about ${siteName}` : `About ${siteName} - baker, artist, and content creator.`}
+>
+  <section class="max-w-narrow mx-auto px-10 py-16 max-md:px-5 max-md:py-10">
+    {/* Header */}
+    <header class="text-center mb-12">
+      <p class="font-sans text-[11px] font-bold tracking-[0.25em] uppercase text-copper mb-3 m-0">
+        About
+      </p>
+      <h1 class="font-serif text-[42px] font-normal text-text-primary leading-[1.15] tracking-tight m-0 max-md:text-[32px]">
+        Hi, I'm {introHeading}
+      </h1>
+    </header>
+
+    {/* Photo + Text */}
+    <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-10 items-start">
+      {/* Photo */}
+      <div class="mx-auto md:mx-0">
+        {hasPhoto ? (
+          <img
+            src={photoSrc}
+            alt={pagePhoto?.alt || about?.photo?.alt || siteName}
+            class="w-full max-w-[280px] aspect-square object-cover block"
+          />
+        ) : (
+          <div
+            class="w-full max-w-[280px] aspect-square flex items-center justify-center border border-border"
+            style={`background: linear-gradient(135deg, var(--green-bright, #2BA89E)18, var(--copper, #C47A2E)18);`}
+          >
+            <span class="text-text-light text-[11px] font-sans tracking-wider uppercase">Photo</span>
+          </div>
+        )}
+      </div>
+
+      {/* Text content */}
+      <div>
+        {pageBody ? (
+          <div class="font-sans text-[15px] text-text-md leading-[1.8]">
+            {/* aboutPageBody is a plain text field - split by double newlines for paragraphs */}
+            {pageBody.split("\n\n").map((para: string) => (
+              <p class="mb-4">{para}</p>
+            ))}
+          </div>
+        ) : about?.body ? (
+          <div class="font-sans text-[15px] text-text-md leading-[1.8]">
+            <p>{about.body}</p>
+          </div>
+        ) : (
+          <div class="font-sans text-[15px] text-text-md leading-[1.8]">
+            <p class="mb-4">
+              Welcome to my corner of the internet. I'm a baker, painter, and all-around creative who believes artistry should spill into every part of life.
+            </p>
+            <p class="mb-4">
+              Here you'll find my favorite recipes tested and photographed in my home kitchen, original paintings and watercolors from my studio, and the occasional style experiment or life update on the blog.
+            </p>
+            <p class="mb-4">
+              I started this site to share the recipes friends and family kept asking me for. What began as a simple collection of my go-to bakes has grown into something much bigger - a creative space where food, art, and life all come together.
+            </p>
+            <p class="mb-4">
+              When I'm not baking or painting, you can find me browsing the farmers market, experimenting with new ingredients, or curled up with a good book and a cup of tea.
+            </p>
+            <p>
+              Thanks for being here. I hope you find something that inspires you to create.
+            </p>
+          </div>
+        )}
+
+        {/* Connect section */}
+        <div class="mt-10 pt-8 border-t border-border">
+          <h2 class="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-text-md mb-4 m-0">
+            {pageSettings.connectHeading}
+          </h2>
+          <p class="font-sans text-sm text-text-md leading-[1.7] mb-4 m-0">
+            {pageSettings.connectBody}
+          </p>
+          <div class="flex flex-wrap gap-4">
+            {pageSettings.showGetInTouchButton && (
+              <a
+                href={pageSettings.getInTouchLink}
+                class="inline-flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase text-green-deep border-2 border-green-deep px-6 py-3 hover:bg-green-deep hover:text-white transition-colors"
+              >
+                {pageSettings.getInTouchText}
+              </a>
+            )}
+            {pageSettings.showSubscribeButton && (
+              <a
+                href={pageSettings.subscribeLink}
+                class="inline-flex items-center gap-2 font-sans text-xs font-bold tracking-wider uppercase text-copper border-2 border-copper px-6 py-3 hover:bg-copper hover:text-white transition-colors"
+              >
+                {pageSettings.subscribeText}
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

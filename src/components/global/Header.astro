@@ -1,0 +1,162 @@
+---
+/**
+ * Header - Sticky navigation bar.
+ * Logo/site name on left, nav links + search icon on right.
+ * RECIPES link has a dropdown populated from Sanity categories.
+ * Mobile: hamburger button triggers the MobileNav React component.
+ *
+ * Nav links are pre-filtered by BaseLayout based on siteSettings toggles.
+ *
+ * Accessibility:
+ * - <nav> with aria-label for screen readers
+ * - Dropdown uses aria-haspopup and shows on hover/focus-within
+ * - Skip link target is in BaseLayout (#main-content)
+ */
+
+import MobileNav from "./MobileNav.tsx";
+import DarkModeToggle from "./DarkModeToggle.tsx";
+import { allNavLinks, type NavLink } from "@lib/navigation";
+
+interface Category {
+  _id: string;
+  title: string;
+  slug: { current: string };
+}
+
+interface Props {
+  siteName?: string;
+  logoUrl?: string;
+  logoAlt?: string;
+  currentPath?: string;
+  recipeCategories?: Category[];
+  navLinks?: NavLink[];
+}
+
+const {
+  siteName = "TurquazTable",
+  logoUrl,
+  logoAlt,
+  currentPath = "/",
+  recipeCategories = [],
+  navLinks: filteredNavLinks,
+} = Astro.props;
+
+// Use passed-in filtered links, or fall back to all links
+const links = filteredNavLinks || allNavLinks;
+---
+
+<nav class="bg-surface border-b border-border sticky top-0 z-50" aria-label="Main navigation">
+  <div class="section-container h-16 flex items-center justify-between">
+    <!-- Logo / Site Name -->
+    <a href="/" class="flex items-baseline gap-1.5 group" aria-label={`${siteName} - Home`}>
+      {logoUrl ? (
+        <img src={logoUrl} alt={logoAlt || siteName} class="h-8" width="200" height="32" />
+      ) : (
+        <span class="font-serif text-[26px] font-semibold text-green-deep tracking-tight">
+          {siteName}
+        </span>
+      )}
+    </a>
+
+    <!-- Desktop Nav -->
+    <div class="hidden lg:flex items-center gap-9">
+      {links.map((link) => {
+        const isActive = currentPath === link.href ||
+          (link.href !== "/" && currentPath.startsWith(link.href));
+
+        return link.hasDropdown ? (
+          <!-- RECIPES with dropdown -->
+          <div class="nav-dropdown-wrap relative group">
+            <a
+              href={link.href}
+              aria-haspopup="true"
+              class:list={[
+                "font-sans text-[11px] font-semibold tracking-wider pb-0.5 border-b-2 transition-colors duration-200",
+                isActive
+                  ? "text-green-deep border-green-bright"
+                  : "text-text-md border-transparent hover:text-green-deep",
+              ]}
+            >
+              {link.label}
+              <span class="ml-1 text-[8px]" aria-hidden="true">&#9662;</span>
+            </a>
+            <!-- Dropdown -->
+            {recipeCategories.length > 0 && (
+              <div
+                class="nav-dropdown absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200"
+                role="menu"
+              >
+                <div class="bg-surface border border-border shadow-lg min-w-[180px] py-2">
+                  <a
+                    href="/recipes"
+                    role="menuitem"
+                    class="block px-5 py-2 font-sans text-[11px] font-bold tracking-wider uppercase text-green-deep hover:bg-cream transition-colors duration-150"
+                  >
+                    All Recipes
+                  </a>
+                  <div class="border-t border-border my-1" role="separator"></div>
+                  {recipeCategories.map((cat) => (
+                    <a
+                      href={`/recipes?category=${cat.slug.current}`}
+                      role="menuitem"
+                      class="block px-5 py-2 font-sans text-[13px] text-text-md hover:text-green-deep hover:bg-cream transition-colors duration-150"
+                    >
+                      {cat.title}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <a
+            href={link.href}
+            aria-current={isActive ? "page" : undefined}
+            class:list={[
+              "font-sans text-[11px] font-semibold tracking-wider pb-0.5 border-b-2 transition-colors duration-200",
+              isActive
+                ? "text-green-deep border-green-bright"
+                : "text-text-md border-transparent hover:text-green-deep",
+            ]}
+          >
+            {link.label}
+          </a>
+        );
+      })}
+
+      <!-- Search Icon -->
+      <a
+        href="/recipes"
+        aria-label="Search recipes"
+        class="w-8 h-8 flex items-center justify-center text-text-md hover:text-green-deep transition-colors duration-200"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+      </a>
+
+      <!-- Dark Mode Toggle -->
+      <DarkModeToggle client:load />
+    </div>
+
+    <!-- Mobile Hamburger + Nav (React island for interactivity) -->
+    <div class="lg:hidden">
+      <MobileNav
+        client:load
+        siteName={siteName}
+        recipeCategories={recipeCategories}
+        currentPath={currentPath}
+        navLinks={links}
+      />
+    </div>
+  </div>
+</nav>
+
+<style>
+  /* Show dropdown on keyboard focus-within as well as hover */
+  .nav-dropdown-wrap:focus-within .nav-dropdown {
+    opacity: 1;
+    visibility: visible;
+  }
+</style>
