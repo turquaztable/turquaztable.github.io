@@ -531,10 +531,10 @@ export default function BeyondTheKitchen({
           transition: all 0.8s ease 0.3s;
         }
         .btk-portal-card {
-          background: rgba(255, 255, 255, 0.06);
-          backdrop-filter: blur(12px);
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(16px);
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.5);
           cursor: pointer;
           transition: all 0.3s ease;
           text-decoration: none;
@@ -542,7 +542,7 @@ export default function BeyondTheKitchen({
           color: inherit;
         }
         .btk-portal-card:hover {
-          border-color: rgba(43, 168, 158, 0.4);
+          border-color: var(--copper, #C47A2E);
           transform: translateY(-4px);
         }
         .btk-portal-image {
@@ -567,21 +567,21 @@ export default function BeyondTheKitchen({
           font-weight: 700;
           letter-spacing: 2.5px;
           text-transform: uppercase;
-          color: var(--green-bright, #2BA89E);
+          color: var(--copper, #C47A2E);
           margin: 0 0 8px;
         }
         .btk-portal-title {
           font-family: var(--font-serif);
           font-size: 19px;
           font-weight: 400;
-          color: #F0EBE2;
+          color: #1A1A1A;
           margin: 0 0 8px;
           line-height: 1.3;
         }
         .btk-portal-desc {
           font-family: var(--font-sans);
           font-size: 13px;
-          color: #A8B8A4;
+          color: #4A4A4A;
           margin: 0 0 18px;
           line-height: 1.5;
         }
@@ -591,7 +591,7 @@ export default function BeyondTheKitchen({
           font-weight: 700;
           letter-spacing: 1px;
           text-transform: uppercase;
-          color: var(--green-bright, #2BA89E);
+          color: var(--copper, #C47A2E);
         }
 
         @media (max-width: 768px) {
